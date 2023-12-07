@@ -1,0 +1,50 @@
+version: '3.3'
+
+services:
+
+    api:
+        image: montebal/laradev:php80-2204
+        build:
+            context: ../
+            dockerfile: docker/dev.Dockerfile
+        container_name: bp_api
+        ports:
+            - ${HOST_HTTP_PORT}:80
+        environment:
+            XDEBUG_TRIGGER: "docker"
+            PHP_IDE_CONFIG: "serverName=Docker"
+        volumes:
+            - ./../:/var/www/html
+            - bp-api-vendor:/var/www/html/vendor
+        networks:
+            bp:
+
+    mysql:
+        image: mysql:8
+        environment:
+            MYSQL_ALLOW_EMPTY_PASSWORD: 'true'
+            MYSQL_ROOT_HOST: '%'
+        ports:
+            - ${SQL_PORT}:3306
+        volumes:
+            - bp-db:/var/lib/mysql
+        networks:
+            bp:
+
+    phpmyadmin:
+        image: phpmyadmin
+        ports:
+            - ${PHPMYADMIN_PORT}:80
+        links:
+            - mysql:db
+        networks:
+            bp:
+
+volumes:
+    bp-db:
+        external: false
+    bp-api-vendor:
+        external: false
+
+networks:
+    bp:
