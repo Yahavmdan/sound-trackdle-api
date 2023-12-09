@@ -4,7 +4,6 @@ namespace Database\Factories;
 
 use App\Models\Teacher;
 use Illuminate\Database\Eloquent\Factories\Factory;
-use Illuminate\Support\Facades\Hash;
 
 class TeacherFactory extends Factory
 {
@@ -14,7 +13,7 @@ class TeacherFactory extends Factory
     {
         return [
             'username' => $this->faker->userName,
-            'password' => Hash::make('password'),
+            'password' => $this->faker->password(8, 12),
             'full_name' => $this->faker->name,
             'email' => $this->faker->unique()->safeEmail,
         ];

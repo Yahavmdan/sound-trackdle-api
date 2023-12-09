@@ -1,10 +1,10 @@
 <?php
 
-namespace App\Http\Requests\Teacher;
+namespace App\Http\Requests\Auth;
 
 use App\Http\Requests\BaseRequest;
 
-class UpdateTeacherRequest extends BaseRequest
+class LoginRequest extends BaseRequest
 {
     /**
      * Get the validation rules that apply to the request.
@@ -14,8 +14,7 @@ class UpdateTeacherRequest extends BaseRequest
     {
         return [
             'username'  => 'required|string',
-            'full_name' => 'required|string',
-            'email'     => 'required|string|email'
+            'password'  => 'required|string|min:8',
         ];
     }
 }

@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 /**
  * @property int id
@@ -14,9 +15,12 @@ class Period extends Model
 {
     use HasFactory;
 
-    protected $fillable = [
-        'name',
-        'teacher_id'
-    ];
+    protected $fillable = ['name'];
+
+
+    public function teacher(): BelongsTo
+    {
+        return $this->belongsTo(Teacher::class);
+    }
 
 }

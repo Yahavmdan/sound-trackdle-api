@@ -7,7 +7,7 @@ use App\Models\Teacher;
 
 class TeachersTableSeeder extends Seeder
 {
-    public function run()
+    public function run(): void
     {
         Teacher::factory()->count(7)->create();
     }

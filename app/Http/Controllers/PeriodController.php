@@ -5,38 +5,64 @@ namespace App\Http\Controllers;
 use App\Http\Requests\Period\StorePeriodRequest;
 use App\Http\Requests\Period\UpdatePeriodRequest;
 use App\Models\Period;
-use App\Models\Teacher;
+use App\Services\QueryService;
 use Illuminate\Http\JsonResponse;
-use Illuminate\Support\Facades\DB;
 
 class PeriodController extends Controller
 {
-    protected string | Period $model = Period::class;
-    protected string $table = 'periods';
+    /**
+     * The model associated with the controller.
+     * @var string|Period
+     */
+    protected string|Period $model = Period::class;
 
-    function getPeriods(): JsonResponse
+    /**
+     * Get all periods.
+     * @return JsonResponse
+     */
+    public function getPeriods(): JsonResponse
     {
-        return $this->index(DB::table($this->table));
+        return $this->index(QueryService::getAll($this->model));
     }
 
-    function getPeriodsByTeacher(int $teacherId): JsonResponse
+    /**
+     * Get periods by teacher.
+     * @param int $teacherId
+     * @return JsonResponse
+     */
+    public function getPeriodsByTeacher(int $teacherId): JsonResponse
     {
-        return $this->index(DB::table($this->table)->where('teacher_id', $teacherId));
+        return $this->index(QueryService::getEntityById($this->model, 'teacher_id', $teacherId));
     }
 
-    function storePeriod(StorePeriodRequest $request, Teacher $teacher): JsonResponse
+    /**
+     * Store a new period.
+     * @param StorePeriodRequest $request
+     * @return JsonResponse
+     */
+    public function storePeriod(StorePeriodRequest $request): JsonResponse
     {
         $values = $request->validated();
-        $values['teacher_id'] = $teacher->id;
-        return $this->save($values, $this->model);
+        return $this->store($values, $this->model);
     }
 
-    function destroyPeriod(Period $period): JsonResponse
+    /**
+     * Destroy (delete) a period.
+     * @param Period $period
+     * @return JsonResponse
+     */
+    public function destroyPeriod(Period $period): JsonResponse
     {
-        return $this->delete($period);
+        return $this->destroy($period);
     }
 
-    function updatePeriod(UpdatePeriodRequest $request, Period $period): JsonResponse
+    /**
+     * Update a period.
+     * @param UpdatePeriodRequest $request
+     * @param Period $period
+     * @return JsonResponse
+     */
+    public function updatePeriod(UpdatePeriodRequest $request, Period $period): JsonResponse
     {
         return $this->update($period, $request->validated());
     }

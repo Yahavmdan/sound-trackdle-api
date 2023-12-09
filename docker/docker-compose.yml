@@ -34,7 +34,7 @@ services:
     phpmyadmin:
         image: phpmyadmin
         ports:
-            - ${PHPMYADMIN_PORT}:80
+            - "90:80"
         links:
             - mysql:db
         networks:

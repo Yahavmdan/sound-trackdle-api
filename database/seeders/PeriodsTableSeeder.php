@@ -7,7 +7,7 @@ use App\Models\Period;
 
 class PeriodsTableSeeder extends Seeder
 {
-    public function run()
+    public function run(): void
     {
         Period::factory()->count(5)->create();
     }

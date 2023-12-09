@@ -2,15 +2,14 @@
 
 namespace App\Http\Requests\Student;
 
-use Illuminate\Foundation\Http\FormRequest;
+use App\Http\Requests\BaseRequest;
 
-class StoreStudentRequest extends FormRequest
+class StoreStudentRequest extends BaseRequest
 {
-    public function authorize(): bool
-    {
-        return true;
-    }
-
+    /**
+     * Get the validation rules that apply to the request.
+     * @return array
+     */
     public function rules(): array
     {
         return [

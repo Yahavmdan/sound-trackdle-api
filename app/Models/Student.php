@@ -3,7 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
-use Illuminate\Database\Eloquent\Model;
+use Illuminate\Foundation\Auth\User as Authenticatable;
 use Laravel\Sanctum\HasApiTokens;
 
 
@@ -14,21 +14,13 @@ use Laravel\Sanctum\HasApiTokens;
  * @property int grade
  * @property int id
  */
-class Student extends Model
+class Student extends Authenticatable
 {
-    public string $entity = 'student';
-
     use HasApiTokens, HasFactory;
 
-    protected $fillable = [
-        'username',
-        'password',
-        'full_name',
-        'grade',
-    ];
-
-    protected $hidden = [
-        'password'
-    ];
+    public string $entity   = 'student';
+    protected $fillable = ['username', 'password', 'full_name', 'grade'];
+    protected $hidden = ['password'];
+    protected $casts = ['password' => 'hashed'];
 
 }

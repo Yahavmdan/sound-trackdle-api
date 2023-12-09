@@ -8,7 +8,7 @@ use App\Models\Student;
 
 class StudentsTableSeeder extends Seeder
 {
-    public function run()
+    public function run(): void
     {
         Student::factory()->count(30)->create();
     }
