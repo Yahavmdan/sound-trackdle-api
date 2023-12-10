@@ -2,9 +2,9 @@
 
 cmd
 
-git clone https://github.com/Yahavmdan/bp-api.git
+cd ${DESIRABLE_LOCATION}
 
-cd {LOCATION}
+git clone https://github.com/Yahavmdan/bp-api.git
 
 cd docker
 
