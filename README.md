@@ -29,6 +29,6 @@ php artisan db:seed --class=StudentsTableSeeder
 
 php artisan db:seed --class=PeriodsTableSeeder
 
-# test instructions: (all routs and resource routs has tests)
+# test instructions: (all routes and resource routes has tests)
 
 php artisan test
