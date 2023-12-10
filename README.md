@@ -6,6 +6,8 @@ cd ${DESIRABLE_LOCATION}
 
 git clone https://github.com/Yahavmdan/bp-api.git
 
+cd ${PROJECT_LOCATION}
+
 cd docker
 
 docker compose up -d
