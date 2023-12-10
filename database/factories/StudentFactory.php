@@ -12,10 +12,10 @@ class StudentFactory extends Factory
     public function definition(): array
     {
         return [
-            'username' => $this->faker->userName,
-            'password' => $this->faker->password,
-            'full_name' => $this->faker->name,
-            'grade' => $this->faker->numberBetween(0, 12),
+            'username'   => $this->faker->userName,
+            'password'   => $this->faker->password,
+            'full_name'  => $this->faker->name,
+            'grade'      => $this->faker->numberBetween(0, 12),
         ];
     }
 }

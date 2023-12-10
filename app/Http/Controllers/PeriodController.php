@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\Period\IndexPeriodRequest;
 use App\Http\Requests\Period\StorePeriodRequest;
 use App\Http\Requests\Period\UpdatePeriodRequest;
 use App\Models\Period;
@@ -17,22 +18,27 @@ class PeriodController extends Controller
     protected string|Period $model = Period::class;
 
     /**
-     * Get all periods.
+     * Retrieve periods based on an optional teacher filter.
+     * This method constructs a query to fetch periods, optionally filtering them based on a specified teacher.
+     * If no teacher ID is provided, it returns all periods. If a teacher ID is provided, it retrieves periods
+     * associated with that teacher.
+     * @param IndexPeriodRequest $request
      * @return JsonResponse
      */
-    public function getPeriods(): JsonResponse
+    public function index(IndexPeriodRequest $request): JsonResponse
     {
-        return $this->index(QueryService::getAll($this->model));
+        $teacherId = $request->get('teacher_id');
+        return $this->indexData(QueryService::indexPeriod($teacherId));
     }
 
     /**
-     * Get periods by teacher.
-     * @param int $teacherId
-     * @return JsonResponse
+     * Show the details of a period record.
+     * @param Period $period The period record to show the details for.
+     * @return JsonResponse The response containing the details of the period record.
      */
-    public function getPeriodsByTeacher(int $teacherId): JsonResponse
+    public function show(Period $period): JsonResponse
     {
-        return $this->index(QueryService::getEntityById($this->model, 'teacher_id', $teacherId));
+        return $this->indexData(QueryService::getEntityById($period, 'id', $period->id));
     }
 
     /**
@@ -40,10 +46,10 @@ class PeriodController extends Controller
      * @param StorePeriodRequest $request
      * @return JsonResponse
      */
-    public function storePeriod(StorePeriodRequest $request): JsonResponse
+    public function store(StorePeriodRequest $request): JsonResponse
     {
         $values = $request->validated();
-        return $this->store($values, $this->model);
+        return $this->storeData($values, $this->model);
     }
 
     /**
@@ -51,9 +57,9 @@ class PeriodController extends Controller
      * @param Period $period
      * @return JsonResponse
      */
-    public function destroyPeriod(Period $period): JsonResponse
+    public function destroy(Period $period): JsonResponse
     {
-        return $this->destroy($period);
+        return $this->deleteData($period);
     }
 
     /**
@@ -62,8 +68,8 @@ class PeriodController extends Controller
      * @param Period $period
      * @return JsonResponse
      */
-    public function updatePeriod(UpdatePeriodRequest $request, Period $period): JsonResponse
+    public function update(UpdatePeriodRequest $request, Period $period): JsonResponse
     {
-        return $this->update($period, $request->validated());
+        return $this->updateData($period, $request->validated());
     }
 }

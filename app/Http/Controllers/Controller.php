@@ -11,8 +11,7 @@ use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Foundation\Validation\ValidatesRequests;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Routing\Controller as BaseController;
-use Illuminate\Support\Collection;
-use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Auth;
 use Symfony\Component\HttpFoundation\Response;
 
 class Controller extends BaseController
@@ -22,59 +21,59 @@ class Controller extends BaseController
     /**
      * Display a listing of the resource.
      */
-    public function index(Builder $entity): JsonResponse
+    public function indexData(Builder $entity): JsonResponse
     {
         try {
             return $this->indexResponse($entity);
         } catch (Exception $e) {
-            return $this->badResponse($e);
+            return $this->errorResponse($e);
         }
     }
 
     /**
      * Store a newly created resource in storage.
      */
-    public function store(array $values, string $entity, ?bool $hasToken = false): JsonResponse
+    public function storeData(array $values, string $entity, ?bool $authenticatable = false): JsonResponse
     {
         try {
             $entity = new $entity($values);
             $entity->save();
-            if (!$hasToken) return $this->okResponse();
+            if (!$authenticatable) return $this->okResponse();
             return $this->authenticationResponse($entity);
         } catch (Exception $e) {
-            return $this->badResponse($e);
+            return $this->errorResponse($e);
         }
     }
 
     /**
      * Update the specified resource in storage.
      */
-    public function update(Model $entity, array $values): JsonResponse
+    public function updateData(Model $entity, array $values): JsonResponse
     {
         try {
             $entity->update($values);
             return $this->okResponse();
         } catch (Exception $e) {
-            return $this->badResponse($e);
+            return $this->errorResponse($e);
         }
     }
 
     /**
      * Remove the specified resource from storage.
      */
-    public function destroy(Builder|Model $entity): JsonResponse
+    public function deleteData(Builder|Model $entity): JsonResponse
     {
         try {
             $entity->delete();
             return $this->okResponse();
         } catch (Exception $e) {
-            return $this->badResponse($e);
+            return $this->errorResponse($e);
         }
     }
 
     /**
      * Generates a JSON response containing the data retrieved from the given Eloquent query builder.
-     * @param Builder $model
+     * @param Builder $entity
      * @return JsonResponse The JSON response containing the data.
      */
     private function indexResponse(Builder $entity): JsonResponse
@@ -99,7 +98,7 @@ class Controller extends BaseController
      * @param Exception|null $e The exception that triggered the bad request.
      * @return JsonResponse The JSON response with a bad request message, status code, and exception details.
      */
-    public function badResponse(?Exception $e = null, ?string $message = null): JsonResponse
+    public function errorResponse(?Exception $e = null, ?string $message = null): JsonResponse
     {
         return response()->json([
             'status code' => Response::HTTP_BAD_REQUEST,
@@ -124,16 +123,15 @@ class Controller extends BaseController
 
     /**
      * Login to the app.
-     * @param Collection $values
-     * @param Teacher|Student|null $entity
+     * @param array $values
+     * @param Teacher|Student|null $model
      * @return JsonResponse
      */
-    public function login(Collection $values, Teacher | Student $entity = null): JsonResponse
+    public function login(array $values, Teacher | Student $model = null): JsonResponse
     {
-        if (!$entity || !Hash::check($values->get('password'), $entity->password)) {
-            return $this->badResponse();
+        if (!$model || !Auth::guard($model->entity.'s')->attempt($values)) {
+            return $this->errorResponse();
         }
-
-        return $this->authenticationResponse($entity);
+        return $this->authenticationResponse($model);
     }
 }

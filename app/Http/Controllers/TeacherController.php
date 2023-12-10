@@ -22,9 +22,19 @@ class TeacherController extends Controller
      * Get all teachers.
      * @return JsonResponse
      */
-    public function getTeachers(): JsonResponse
+    public function index(): JsonResponse
     {
-        return $this->index(QueryService::getAll($this->model));
+        return $this->indexData(QueryService::getAll($this->model));
+    }
+
+    /**
+     * Show the details of a teacher record.
+     * @param Teacher $teacher The teacher record to show the details for.
+     * @return JsonResponse The response containing the details of the teacher record.
+     */
+    public function show(Teacher $teacher): JsonResponse
+    {
+        return $this->indexData(QueryService::getEntityById($teacher, 'id', $teacher->id));
     }
 
     /**
@@ -32,10 +42,10 @@ class TeacherController extends Controller
      * @param StoreTeacherRequest $request
      * @return JsonResponse
      */
-    public function storeTeacher(StoreTeacherRequest $request): JsonResponse
+    public function store(StoreTeacherRequest $request): JsonResponse
     {
         $values = $request->validated();
-        return $this->store($values, $this->model, true);
+        return $this->storeData($values, $this->model, true);
     }
 
     /**
@@ -43,9 +53,9 @@ class TeacherController extends Controller
      * @param Teacher $teacher
      * @return JsonResponse
      */
-    public function destroyTeacher(Teacher $teacher): JsonResponse
+    public function destroy(Teacher $teacher): JsonResponse
     {
-        return $this->destroy($teacher);
+        return $this->deleteData($teacher);
     }
 
     /**
@@ -54,9 +64,9 @@ class TeacherController extends Controller
      * @param Teacher $teacher
      * @return JsonResponse
      */
-    public function updateTeacher(UpdateTeacherRequest $request, Teacher $teacher): JsonResponse
+    public function update(UpdateTeacherRequest $request, Teacher $teacher): JsonResponse
     {
-        return $this->update($teacher, $request->validated());
+        return $this->updateData($teacher, $request->validated());
     }
 
     /**
@@ -65,7 +75,7 @@ class TeacherController extends Controller
      * @param int $teacherId
      * @return void
      */
-    public function associateWithPeriod(Period $period, int $teacherId): void
+    public function associatePeriod(Period $period, int $teacherId): void
     {
         $period->teacher()->associate($teacherId)->save();
     }
@@ -79,6 +89,6 @@ class TeacherController extends Controller
     {
         /* @var Teacher $teacher */
         $teacher = QueryService::findEntityByUserName(Teacher::class, $request->get('username'))->first();
-        return $this->login(collect($request->validated()), $teacher);
+        return $this->login($request->validated(), $teacher);
     }
 }

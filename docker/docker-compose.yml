@@ -9,7 +9,7 @@ services:
             dockerfile: docker/dev.Dockerfile
         container_name: bp_api
         ports:
-            - ${HOST_HTTP_PORT}:80
+            - "80:80"
         environment:
             XDEBUG_TRIGGER: "docker"
             PHP_IDE_CONFIG: "serverName=Docker"

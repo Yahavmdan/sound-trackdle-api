@@ -18,8 +18,20 @@ class Teacher extends Authenticatable
     use HasApiTokens, HasFactory;
 
     public string $entity = 'teacher';
-    protected $fillable = ['username', 'password', 'full_name', 'email'];
-    protected $hidden = ['password'];
-    protected $casts = ['password' => 'hashed'];
+
+    protected $fillable = [
+        'username',
+        'password',
+        'full_name',
+        'email'
+    ];
+
+    protected $hidden = [
+        'password'
+    ];
+
+    protected $casts = [
+        'password' => 'hashed'
+    ];
 
 }

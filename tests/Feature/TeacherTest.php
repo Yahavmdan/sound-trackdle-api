@@ -3,13 +3,12 @@
 namespace Tests\Feature;
 
 use App\Models\Teacher;
-use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Foundation\Testing\WithFaker;
 use Tests\TestCase;
 
 class TeacherTest extends TestCase
 {
-    use RefreshDatabase, WithFaker;
+    use WithFaker;
 
     public function authenticateTeacher(): void
     {
@@ -46,7 +45,7 @@ class TeacherTest extends TestCase
         $this->authenticateTeacher();
         $response = $this->getJson("/api/teacher/$teacher->id");
         $response->assertOk();
-        $response->assertJson([
+        $response->assertJsonFragment([
             'id' => $teacher->id,
             'full_name' => $teacher->full_name,
             'username' => $teacher->username,

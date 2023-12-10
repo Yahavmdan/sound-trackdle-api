@@ -3,11 +3,11 @@
 namespace App\Http\Controllers;
 
 use App\Http\Requests\Auth\LoginRequest;
+use App\Http\Requests\Student\IndexStudentRequest;
 use App\Http\Requests\Student\StoreStudentRequest;
 use App\Http\Requests\Student\UpdateStudentRequest;
 use App\Models\PeriodStudent;
 use App\Models\Student;
-use App\Models\Teacher;
 use App\Services\QueryService;
 use Illuminate\Http\JsonResponse;
 
@@ -20,33 +20,26 @@ class StudentController extends Controller
     protected string|Student $model = Student::class;
 
     /**
-     * Get all students.
+     * Get students based on different criteria.
+     * @param IndexStudentRequest $request
      * @return JsonResponse
      */
-    public function getStudents(): JsonResponse
+    public function index(IndexStudentRequest $request): JsonResponse
     {
-        return $this->index(QueryService::getAll($this->model));
+        $teacherId = $request->get('teacher_id');
+        $periodId = $request->get('period_id');
+        if ($teacherId && !$periodId) return $this->errorResponse();
+        return $this->indexData(QueryService::indexStudent($teacherId, $periodId));
     }
 
     /**
-     * Get students by teacher and period.
-     * @param int $teacherId
-     * @return JsonResponse
+     * Show the details of a student record.
+     * @param Student $student The student record to show the details for.
+     * @return JsonResponse The response containing the details of the student record.
      */
-    public function getStudentsByTeacherPeriod(int $teacherId): JsonResponse
+    public function show(Student $student): JsonResponse
     {
-        return $this->index(QueryService::getStudentsByTeacherPeriod($teacherId));
-    }
-
-    /**
-     * Get students by period.
-     * @param int $periodId
-     * @return JsonResponse
-     */
-    public function getStudentsByPeriod(int $periodId): JsonResponse
-    {
-        $periodStudents = QueryService::getEntityById(PeriodStudent::class, 'period_id', $periodId)->pluck('student_id');
-        return $this->index(Student::query()->whereIn('id', $periodStudents->toArray()));
+        return $this->indexData(QueryService::getEntityById($student, 'id', $student->id));
     }
 
     /**
@@ -54,10 +47,10 @@ class StudentController extends Controller
      * @param StoreStudentRequest $request
      * @return JsonResponse
      */
-    public function storeStudent(StoreStudentRequest $request): JsonResponse
+    public function store(StoreStudentRequest $request): JsonResponse
     {
         $values = $request->validated();
-        return $this->store($values, $this->model, true);
+        return $this->storeData($values, $this->model, true);
     }
 
     /**
@@ -65,20 +58,20 @@ class StudentController extends Controller
      * @param Student $student
      * @return JsonResponse
      */
-    public function destroyStudent(Student $student): JsonResponse
+    public function destroy(Student $student): JsonResponse
     {
-        return $this->destroy($student);
+        return $this->deleteData($student);
     }
 
     /**
      * Update a student.
      * @param UpdateStudentRequest $request
-     * @param Teacher $teacher
+     * @param Student $student
      * @return JsonResponse
      */
-    public function updateStudent(UpdateStudentRequest $request, Teacher $teacher): JsonResponse
+    public function update(UpdateStudentRequest $request, Student $student): JsonResponse
     {
-        return $this->update($teacher, $request->validated());
+        return $this->updateData($student, $request->validated());
     }
 
     /**
@@ -87,10 +80,11 @@ class StudentController extends Controller
      * @param int $periodId
      * @return JsonResponse
      */
-    public function associateWithPeriod(int $studentId, int $periodId): JsonResponse
+    public function associatePeriod(int $studentId, int $periodId): JsonResponse
     {
-        if (QueryService::getPeriodStudent($studentId, $periodId)->first()) {
-            return $this->badResponse(null, 'Student is already in this period');
+        $pStudent = QueryService::getManyToMany($this->model, 'student_id', 'period_id', $studentId, $periodId)->first();
+        if ($pStudent) {
+            return $this->errorResponse(null, 'Student is already in this period');
         }
 
         $model = new PeriodStudent();
@@ -107,15 +101,14 @@ class StudentController extends Controller
      * @param int $periodId
      * @return JsonResponse
      */
-    public function removeFromPeriod(int $studentId, int $periodId): JsonResponse
+    public function removePeriod(int $studentId, int $periodId): JsonResponse
     {
-        $periodStudent = QueryService::getPeriodStudent($studentId, $periodId);
-
-        if (!$periodStudent->first()) {
-            return $this->badResponse(null, 'Student is not in this period');
+        $pStudent = QueryService::getManyToMany($this->model, 'student_id', 'period_id', $studentId, $periodId)->first();
+        if (!$pStudent) {
+            return $this->errorResponse(null, 'Student is not in this period');
         }
 
-        return $this->destroy($periodStudent);
+        return $this->deleteData($pStudent);
     }
 
     /**
@@ -127,7 +120,6 @@ class StudentController extends Controller
     {
         /* @var Student $student */
         $student = QueryService::findEntityByUserName(Student::class, $request->get('username'))->first();
-
-        return $this->login(collect($request->validated()), $student);
+        return $this->login($request->validated(), $student);
     }
 }
