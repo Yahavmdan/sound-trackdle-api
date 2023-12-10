@@ -87,18 +87,4 @@ class QueryService
         return $model::query()->where('username', $username);
     }
 
-    /**
-     * Get many-to-many relation record.
-     * @param string|Model $model
-     * @param string $fCol
-     * @param string $sCol
-     * @param int $firstId
-     * @param int $secondId
-     * @return Builder|null The query builder for retrieving the PeriodStudent record or null if not found.
-     */
-    public static function getManyToMany(string|Model $model, string $fCol, string $sCol, int $firstId, int $secondId): ?Builder
-    {
-        return $model::query()->where($fCol, $firstId)->where($sCol, $secondId);
-    }
-
 }

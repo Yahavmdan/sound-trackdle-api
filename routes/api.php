@@ -27,8 +27,8 @@ Route::post('student/login', [StudentController::class, 'loginStudent']);
 Route::group(['middleware' => ['auth:sanctum', 'ability:teacher']], function () {
     // student
     Route::resource('student', StudentController::class)->except(['store']);
-    Route::post('student/{studentId}/period/{periodId}', [StudentController::class, 'associatePeriod']);
-    Route::delete('student/{studentId}/period/{periodId}', [StudentController::class, 'removePeriod']);
+    Route::post('student/{studentId}/period/{period}', [StudentController::class, 'attachPeriod']);
+    Route::delete('student/{studentId}/period/{period}', [StudentController::class, 'detachPeriod']);
 
     // period
     Route::resource('period', PeriodController::class);

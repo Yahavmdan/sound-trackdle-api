@@ -6,9 +6,10 @@ use App\Http\Requests\Auth\LoginRequest;
 use App\Http\Requests\Student\IndexStudentRequest;
 use App\Http\Requests\Student\StoreStudentRequest;
 use App\Http\Requests\Student\UpdateStudentRequest;
-use App\Models\PeriodStudent;
+use App\Models\Period;
 use App\Models\Student;
 use App\Services\QueryService;
+use Exception;
 use Illuminate\Http\JsonResponse;
 
 class StudentController extends Controller
@@ -77,38 +78,33 @@ class StudentController extends Controller
     /**
      * Associate a student with a period.
      * @param int $studentId
-     * @param int $periodId
+     * @param Period $period
      * @return JsonResponse
      */
-    public function associatePeriod(int $studentId, int $periodId): JsonResponse
+    public function attachPeriod(int $studentId, Period $period): JsonResponse
     {
-        $pStudent = QueryService::getManyToMany($this->model, 'student_id', 'period_id', $studentId, $periodId)->first();
-        if ($pStudent) {
-            return $this->errorResponse(null, 'Student is already in this period');
+        try {
+            $period->students()->syncWithoutDetaching([$studentId]);
+            return $this->okResponse();
+        } catch (Exception $e) {
+            return $this->errorResponse($e);
         }
-
-        $model = new PeriodStudent();
-        $model->period()->associate($periodId);
-        $model->student()->associate($studentId);
-        $model->save();
-
-        return $this->okResponse();
     }
 
     /**
      * Remove a student from a period.
      * @param int $studentId
-     * @param int $periodId
+     * @param Period $period
      * @return JsonResponse
      */
-    public function removePeriod(int $studentId, int $periodId): JsonResponse
+    public function detachPeriod(int $studentId, Period $period): JsonResponse
     {
-        $pStudent = QueryService::getManyToMany($this->model, 'student_id', 'period_id', $studentId, $periodId)->first();
-        if (!$pStudent) {
-            return $this->errorResponse(null, 'Student is not in this period');
+        try {
+            $period->students()->detach([$studentId]);
+            return $this->okResponse();
+        } catch (Exception $e) {
+            return $this->errorResponse($e);
         }
-
-        return $this->deleteData($pStudent);
     }
 
     /**
