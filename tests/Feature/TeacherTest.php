@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Models\Period;
 use App\Models\Teacher;
 use Illuminate\Foundation\Testing\WithFaker;
 use Tests\TestCase;
@@ -95,5 +96,16 @@ class TeacherTest extends TestCase
         $response = $this->deleteJson("/api/teacher/$teacher->id");
         $response->assertOk();
         $this->assertDatabaseMissing(Teacher::class, ['id' => $teacher->id]);
+    }
+
+    public function testAssociatePeriod()
+    {
+        $this->authenticateTeacher();
+        $teacher = Teacher::factory()->create();
+        $period = Period::factory()->create();
+        $response = $this->post("/api/teacher/{$period->id}/{$teacher->id}");
+        $response->assertOk();
+        $period->refresh();
+        $this->assertEquals($teacher->id, $period->teacher_id);
     }
 }

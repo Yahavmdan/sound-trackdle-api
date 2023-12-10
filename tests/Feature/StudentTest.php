@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Models\Period;
 use App\Models\Student;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Foundation\Testing\WithFaker;
@@ -96,5 +97,34 @@ class StudentTest extends TestCase
         $response = $this->deleteJson("/api/student/$student->id");
         $response->assertOk();
         $this->assertDatabaseMissing(Student::class, ['id' => $student->id]);
+    }
+
+    /**
+     * Test attaching a student to a period.
+     *
+     * @return void
+     */
+    public function testAttachPeriod()
+    {
+        $this->authenticateStudent();
+        $student = Student::factory()->create();
+        $period = Period::factory()->create();
+        $response = $this->post("/api/student/{$student->id}/period/{$period->id}");
+        $response->assertOk();
+    }
+
+    /**
+     * Test detaching a student from a period.
+     *
+     * @return void
+     */
+    public function testDetachPeriod()
+    {
+        $this->authenticateStudent();
+        $student = Student::factory()->create();
+        $period = Period::factory()->create();
+        $period->students()->attach($student);
+        $response = $this->delete("/api/student/{$student->id}/period/{$period->id}");
+        $response->assertOk();
     }
 }
