@@ -19,3 +19,16 @@ docker compose up -d
 composer install
 
 php artisan migrate (answer yes to create new db)
+
+
+# seed options:
+
+php artisan db:seed --class=TeachersTableSeeder
+
+php artisan db:seed --class=StudentsTableSeeder
+
+php artisan db:seed --class=PeriodsTableSeeder
+
+# test instructions: (all routs and resource routs has tests)
+
+php artisan test
