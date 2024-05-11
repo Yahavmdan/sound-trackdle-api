@@ -2,7 +2,7 @@
 
 namespace Tests\Feature;
 
-use App\Models\Period;
+use App\Models\File;
 use App\Models\Student;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Foundation\Testing\WithFaker;
@@ -108,7 +108,7 @@ class StudentTest extends TestCase
     {
         $this->authenticateStudent();
         $student = Student::factory()->create();
-        $period = Period::factory()->create();
+        $period = File::factory()->create();
         $response = $this->post("/api/student/{$student->id}/period/{$period->id}");
         $response->assertOk();
     }
@@ -122,7 +122,7 @@ class StudentTest extends TestCase
     {
         $this->authenticateStudent();
         $student = Student::factory()->create();
-        $period = Period::factory()->create();
+        $period = File::factory()->create();
         $period->students()->attach($student);
         $response = $this->delete("/api/student/{$student->id}/period/{$period->id}");
         $response->assertOk();

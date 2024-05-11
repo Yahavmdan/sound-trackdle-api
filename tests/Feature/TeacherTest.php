@@ -2,7 +2,7 @@
 
 namespace Tests\Feature;
 
-use App\Models\Period;
+use App\Models\File;
 use App\Models\Teacher;
 use Illuminate\Foundation\Testing\WithFaker;
 use Tests\TestCase;
@@ -102,7 +102,7 @@ class TeacherTest extends TestCase
     {
         $this->authenticateTeacher();
         $teacher = Teacher::factory()->create();
-        $period = Period::factory()->create();
+        $period = File::factory()->create();
         $response = $this->post("/api/teacher/{$period->id}/{$teacher->id}");
         $response->assertOk();
         $period->refresh();

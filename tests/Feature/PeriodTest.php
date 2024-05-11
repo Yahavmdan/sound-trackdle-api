@@ -2,7 +2,7 @@
 
 namespace Tests\Feature;
 
-use App\Models\Period;
+use App\Models\File;
 use App\Models\Teacher;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Foundation\Testing\WithFaker;
@@ -28,7 +28,7 @@ class PeriodTest extends TestCase
         ]);
 
         $response->assertStatus(200);
-        $this->assertDatabaseHas(Period::class, ['name' => $name]);
+        $this->assertDatabaseHas(File::class, ['name' => $name]);
     }
 
     public function testIndexPeriod(): void
@@ -41,7 +41,7 @@ class PeriodTest extends TestCase
 
     public function testShowPeriod(): void
     {
-        $period = Period::class::factory()->create();
+        $period = File::class::factory()->create();
         $this->authenticateTeacher();
         $response = $this->getJson("/api/period/$period->id");
         $response->assertOk();
@@ -52,7 +52,7 @@ class PeriodTest extends TestCase
 
     public function testUpdatePeriod(): void
     {
-        $period = Period::class::factory()->create();
+        $period = File::class::factory()->create();
         $updateData = [
             'name' => $this->faker->name(),
         ];
@@ -60,17 +60,17 @@ class PeriodTest extends TestCase
         $this->authenticateTeacher();
         $response = $this->putJson("/api/period/$period->id", $updateData);
         $response->assertOk();
-        $this->assertDatabaseHas(Period::class, [
+        $this->assertDatabaseHas(File::class, [
             'name' => $updateData['name'],
         ]);
     }
 
     public function testDestroyPeriod(): void
     {
-        $period = Period::class::factory()->create();
+        $period = File::class::factory()->create();
         $this->authenticateTeacher();
         $response = $this->deleteJson("/api/period/$period->id");
         $response->assertOk();
-        $this->assertDatabaseMissing(Period::class, ['id' => $period->id]);
+        $this->assertDatabaseMissing(File::class, ['id' => $period->id]);
     }
 }

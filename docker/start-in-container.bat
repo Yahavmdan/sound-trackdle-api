@@ -1,2 +1,2 @@
 @echo off
-powershell docker exec -it bp_api bash
+powershell docker exec -it sound-trackdle-api bash

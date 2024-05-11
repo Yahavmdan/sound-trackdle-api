@@ -12,7 +12,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsToMany;
  * @property string name
  * @property int teacher_id
  */
-class Period extends Model
+class File extends Model
 {
     use HasFactory;
 

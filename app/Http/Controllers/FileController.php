@@ -1,75 +1,39 @@
 <?php
 
 namespace App\Http\Controllers;
-
-use App\Http\Requests\Period\IndexPeriodRequest;
-use App\Http\Requests\Period\StorePeriodRequest;
-use App\Http\Requests\Period\UpdatePeriodRequest;
-use App\Models\Period;
-use App\Services\QueryService;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 
-class PeriodController extends Controller
+class FileController extends Controller
 {
-    /**
-     * The model associated with the controller.
-     * @var string|Period
-     */
-    protected string|Period $model = Period::class;
 
-    /**
-     * Retrieve periods based on an optional teacher filter.
-     * This method constructs a query to fetch periods, optionally filtering them based on a specified teacher.
-     * If no teacher ID is provided, it returns all periods. If a teacher ID is provided, it retrieves periods
-     * associated with that teacher.
-     * @param IndexPeriodRequest $request
-     * @return JsonResponse
-     */
-    public function index(IndexPeriodRequest $request): JsonResponse
+    public function health(): JsonResponse
     {
-        $teacherId = $request->get('teacher_id');
-        return $this->indexData(QueryService::indexPeriod($teacherId));
+        return response()->json(['message' => 'Ok']);
     }
 
-    /**
-     * Show the details of a period record.
-     * @param Period $period The period record to show the details for.
-     * @return JsonResponse The response containing the details of the period record.
-     */
-    public function show(Period $period): JsonResponse
+    public function upload(Request $request): JsonResponse
     {
-        return $this->indexData(QueryService::getEntityById($period, 'id', $period->id));
+        if ($request->hasFile('file')) {
+            $file = $request->file('file');
+            $fileName = $file->getClientOriginalName();
+            $file->storeAs('public/mp3', $fileName);
+
+            return response()->json(['message' => 'File uploaded successfully']);
+        }
+
+        return response()->json(['message' => 'No file uploaded'], 400);
     }
 
-    /**
-     * Store a new period.
-     * @param StorePeriodRequest $request
-     * @return JsonResponse
-     */
-    public function store(StorePeriodRequest $request): JsonResponse
+    public function stream(Request $request): bool|JsonResponse|string
     {
-        $values = $request->validated();
-        return $this->storeData($values, $this->model);
+        $fileName = $request->input('fileName');
+        $filePath = storage_path('app/public/mp3/' . $fileName . '.mp3');
+
+        if (file_exists($filePath)) {
+            return file_get_contents($filePath);
+        }
+        return response()->json(['message' => 'File not found'], 404);
     }
 
-    /**
-     * Destroy (delete) a period.
-     * @param Period $period
-     * @return JsonResponse
-     */
-    public function destroy(Period $period): JsonResponse
-    {
-        return $this->deleteData($period);
-    }
-
-    /**
-     * Update a period.
-     * @param UpdatePeriodRequest $request
-     * @param Period $period
-     * @return JsonResponse
-     */
-    public function update(UpdatePeriodRequest $request, Period $period): JsonResponse
-    {
-        return $this->updateData($period, $request->validated());
-    }
 }
