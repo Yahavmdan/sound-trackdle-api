@@ -1,16 +1,13 @@
 <?php
 
 namespace App\Http\Controllers;
+use App\Models\File;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Http\Response;
 
 class FileController extends Controller
 {
-
-    public function health(): JsonResponse
-    {
-        return response()->json(['message' => 'Ok']);
-    }
 
     public function upload(Request $request): JsonResponse
     {
@@ -25,15 +22,25 @@ class FileController extends Controller
         return response()->json(['message' => 'No file uploaded'], 400);
     }
 
-    public function stream(Request $request): bool|JsonResponse|string
+    public function stream(Request $request): Response | string
     {
-        $fileName = $request->input('fileName');
-        $filePath = storage_path('app/public/mp3/' . $fileName . '.mp3');
-
-        if (file_exists($filePath)) {
-            return file_get_contents($filePath);
+        $path = $request->get('path');
+        if (file_exists($path)) {
+            return file_get_contents($path);
         }
-        return response()->json(['message' => 'File not found'], 404);
+        return response(['message' => 'File not found'], 404);
+    }
+
+    public function getFile(): Response
+    {
+        $file = File::query()
+            ->where('is_recently_played', 0)
+            ->whereNotNull('file_path')
+            ->first();
+        if (!$file instanceof File) {
+            return response(['message' => 'File not found'], 404);
+        }
+        return response($file, 200);
     }
 
 }

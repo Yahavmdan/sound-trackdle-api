@@ -10,7 +10,11 @@ class CreateFilesTable extends Migration
     {
         Schema::create('files', function (Blueprint $table) {
             $table->id();
-            $table->string('filename');
+            $table->string('name');
+            $table->string('type');
+            $table->integer('year');
+            $table->string('file_path')->nullable();
+            $table->tinyInteger('is_recently_played');
             $table->timestamps();
         });
     }
