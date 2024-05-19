@@ -1,7 +1,9 @@
 <?php
 
 namespace App\Http\Controllers;
+
 use App\Models\File;
+use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
@@ -22,24 +24,40 @@ class FileController extends Controller
         return response()->json(['message' => 'No file uploaded'], 400);
     }
 
-    public function stream(Request $request): Response | string
+    public function stream(Request $request): Response|string
     {
-        $path = $request->get('path');
-        if (file_exists($path)) {
-            return file_get_contents($path);
+        /* @var File $file */
+        $file = File::query()->where('id', $request->get('id'))->first();
+        if (file_exists($file->file_path)) {
+            $file->update(['played_at' => Carbon::today()]);
+            return file_get_contents($file->file_path);
         }
         return response(['message' => 'File not found'], 404);
     }
 
     public function getFile(): Response
     {
+        /* @var File $file */
         $file = File::query()
-            ->where('is_recently_played', 0)
+            ->where(fn($query) => $query
+                ->whereNull('played_at')
+                ->orWhere('played_at', '>=', Carbon::today()))
             ->whereNotNull('file_path')
+            ->select('id', 'main_actor', 'year', 'plot')
             ->first();
-        if (!$file instanceof File) {
-            return response(['message' => 'File not found'], 404);
-        }
+        if (!$file) return response(['message' => 'File not found'], 404);
+
+        return response($file, 200);
+    }
+
+    public function getFileById(Request $request): Response
+    {
+        /* @var File $file */
+        $file = File::query()
+            ->where('id', $request->get('id'))
+            ->first();
+        if (!$file) return response(['message' => 'File not found'], 404);
+
         return response($file, 200);
     }
 

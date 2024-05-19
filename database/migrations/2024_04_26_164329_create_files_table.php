@@ -14,7 +14,9 @@ class CreateFilesTable extends Migration
             $table->string('type');
             $table->integer('year');
             $table->string('file_path')->nullable();
-            $table->tinyInteger('is_recently_played');
+            $table->string('main_actor');
+            $table->string('plot');
+            $table->date('played_at')->nullable();
             $table->timestamps();
         });
     }

@@ -17,8 +17,9 @@ use Illuminate\Support\Facades\Route;
 Route::post('health', [FileController::class, 'health']);
 
 Route::post('upload', [FileController::class, 'upload']);
-Route::get('movie', [MovieController::class, 'index']);
+Route::get('movie', [MovieController::class, 'getMovieNamesAndIds']);
 Route::post('stream', [FileController::class, 'stream']);
 Route::get('file', [FileController::class, 'getFile']);
+Route::post('file/id', [FileController::class, 'getFileById']);
 
 

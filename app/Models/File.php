@@ -12,8 +12,10 @@ use Illuminate\Database\Eloquent\Relations\BelongsToMany;
  * @property string name
  * @property int year
  * @property string file_path
- * @property bool is_recently_played
+ * @property int played_at
  * @property string type
+ * @property string main_actor
+ * @property string plot
  */
 class File extends Model
 {
@@ -23,7 +25,9 @@ class File extends Model
         'name',
         'year',
         'file_path',
-        'is_recently_played',
+        'played_at',
         'type',
+        'main_actor',
+        'plot',
     ];
 }
