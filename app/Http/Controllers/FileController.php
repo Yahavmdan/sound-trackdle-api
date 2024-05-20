@@ -36,6 +36,7 @@ class FileController extends Controller
             $fileUrl = Storage::disk('public')->url($file->file_path);
             return response(['path' => $fileUrl], 200);
         }
+
         return response(['message' => 'File not found'], 404);
     }
 
