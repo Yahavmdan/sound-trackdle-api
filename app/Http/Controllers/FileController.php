@@ -17,7 +17,6 @@ class FileController extends Controller
             $file = $request->file('file');
             $fileName = $file->getClientOriginalName();
             $file->storeAs('tracks', $fileName, 'public');
-            $file->storeAs('public/mp3', $fileName);
             $model = File::query()->where('name', Helpers::snakeToTitleCase($fileName))->first();
             $model->update(['file_path' => $fileName]);
 
@@ -32,16 +31,16 @@ class FileController extends Controller
         /* @var File $file */
         $file = File::query()->where('id', $request->get('id'))->first();
         if (env('APP_ENV') === 'local') {
-            if (file_exists( 'app/public/mp3/' . $file->file_path)) {
+            if (file_exists(storage_path('/app/public/tracks/' . $file->file_path))) {
                 $file->update(['played_at' => Carbon::today()]);
-                return file_get_contents( 'app/public/mp3/' . $file->file_path);
+                return file_get_contents(storage_path('/app/public/tracks/' . $file->file_path));
             }
             return response(['message' => 'File not found'], 404);
         }
         if (env('APP_ENV') === 'public') {
             if ($file->file_path) {
                 $file->update(['played_at' => Carbon::today()]);
-                return response($file->file_path, 200);
+                return response(['path' => 'https://sound-trackdle-api-production.up.railway.app/storage/tracks/'. $file->file_path], 200);
             }
             return response(['message' => 'File not found'], 404);
         }
