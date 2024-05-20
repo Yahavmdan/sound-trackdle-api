@@ -16,6 +16,7 @@ class FileController extends Controller
         if ($request->hasFile('file')) {
             $file = $request->file('file');
             $fileName = $file->getClientOriginalName();
+            $file->storeAs('tracks', $fileName, 'public');
             $file->storeAs('public/mp3', $fileName);
 
             return response()->json(['message' => 'File uploaded successfully']);
