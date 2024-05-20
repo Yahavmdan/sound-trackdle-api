@@ -31,11 +31,23 @@ class FileController extends Controller
     {
         /* @var File $file */
         $file = File::query()->where('id', $request->get('id'))->first();
-        if (file_exists(env('FILE_BASE_PATH') . $file->file_path)) {
-            $file->update(['played_at' => Carbon::today()]);
-            return file_get_contents( env('FILE_BASE_PATH') . $file->file_path);
+        if (env('APP_ENV') === 'local') {
+            if (file_exists( 'app/public/mp3/' . $file->file_path)) {
+                $file->update(['played_at' => Carbon::today()]);
+                return file_get_contents( 'app/public/mp3/' . $file->file_path);
+            }
+            return response(['message' => 'File not found'], 404);
         }
+        if (env('APP_ENV') === 'public') {
+            if ($file->file_path) {
+                $file->update(['played_at' => Carbon::today()]);
+                return response($file->file_path, 200);
+            }
+            return response(['message' => 'File not found'], 404);
+        }
+
         return response(['message' => 'File not found'], 404);
+
     }
 
     public function getFile(): Response
