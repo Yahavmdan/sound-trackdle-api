@@ -9,16 +9,6 @@ use Illuminate\Support\Facades\DB;
 class MoviesSeeder extends Seeder
 {
 
-    private function getFileContent(string $fileName): ?string
-    {
-        $filePath = storage_path('app/public/mp3/' . $fileName . '.mp3');
-
-        if (file_exists($filePath)) {
-            return $filePath;
-        }
-        return null;
-    }
-
     public function run(): void
     {
         $movies = [
@@ -66,7 +56,7 @@ class MoviesSeeder extends Seeder
 
 
         foreach ($movies as $movie) {
-            $movie['file_path'] = self::getFileContent(Helpers::toSnakeCase($movie['name']));
+            $movie['file_path'] = Helpers::getFilePath(Helpers::toSnakeCase($movie['name']));
 
             DB::table('files')->insert([
                 'name' => $movie['name'],

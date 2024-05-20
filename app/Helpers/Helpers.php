@@ -2,8 +2,6 @@
 
 namespace App\Helpers;
 
-use Illuminate\Support\Carbon;
-
 class Helpers
 {
     static function toSnakeCase(string $string): string
@@ -11,8 +9,27 @@ class Helpers
         return strtolower(preg_replace('/[^A-Za-z0-9]+/', '_', $string));
     }
 
-    static function getDate(): int
+
+    static function getFilePath(string $fileName): ?string
     {
-        return Carbon::now()->get('day') .+ Carbon::now()->get('month') .+ Carbon::now()->get('year');
+        $filePath = storage_path('app/public/tracks/' . $fileName);
+
+        if (file_exists($filePath)) {
+            return $filePath;
+        }
+        return null;
+    }
+
+    static function snakeToTitleCase($string): string
+    {
+        $string = str_replace('_', ' ', $string);
+
+        $string = ucwords($string);
+
+        if (($pos = strpos($string, '.')) !== false) {
+            $string = substr($string, 0, $pos);
+        }
+
+        return $string;
     }
 }

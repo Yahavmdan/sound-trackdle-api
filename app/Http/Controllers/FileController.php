@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Helpers\Helpers;
 use App\Models\File;
 use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
@@ -10,7 +11,6 @@ use Illuminate\Http\Response;
 
 class FileController extends Controller
 {
-
     public function upload(Request $request): JsonResponse
     {
         if ($request->hasFile('file')) {
@@ -18,6 +18,8 @@ class FileController extends Controller
             $fileName = $file->getClientOriginalName();
             $file->storeAs('tracks', $fileName, 'public');
             $file->storeAs('public/mp3', $fileName);
+            $model = File::query()->where('name', Helpers::snakeToTitleCase($fileName))->first();
+            $model->update(['file_path' => $fileName]);
 
             return response()->json(['message' => 'File uploaded successfully']);
         }
@@ -29,9 +31,9 @@ class FileController extends Controller
     {
         /* @var File $file */
         $file = File::query()->where('id', $request->get('id'))->first();
-        if (file_exists($file->file_path)) {
+        if (file_exists(env('FILE_BASE_PATH') . $file->file_path)) {
             $file->update(['played_at' => Carbon::today()]);
-            return file_get_contents($file->file_path);
+            return file_get_contents( env('FILE_BASE_PATH') . $file->file_path);
         }
         return response(['message' => 'File not found'], 404);
     }
