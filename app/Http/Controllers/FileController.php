@@ -8,6 +8,7 @@ use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
+use Illuminate\Support\Facades\Storage;
 
 class FileController extends Controller
 {
@@ -18,7 +19,7 @@ class FileController extends Controller
             $fileName = $file->getClientOriginalName();
             $file->storeAs('tracks', $fileName, 'public');
             $model = File::query()->where('name', Helpers::snakeToTitleCase($fileName))->first();
-            $model->update(['file_path' => $fileName]);
+            $model->update(['file_path' => 'tracks/' . $fileName]);
 
             return response()->json(['message' => 'File uploaded successfully']);
         }
@@ -30,23 +31,12 @@ class FileController extends Controller
     {
         /* @var File $file */
         $file = File::query()->where('id', $request->get('id'))->first();
-        if (env('APP_ENV') === 'local') {
-            if (file_exists(storage_path('/app/public/tracks/' . $file->file_path))) {
+            if (Storage::exists('/public/'.$file->file_path)) {
                 $file->update(['played_at' => Carbon::today()]);
-                return file_get_contents(storage_path('/app/public/tracks/' . $file->file_path));
+                return response(['path' => Storage::url($file->file_path)], 200);
+
             }
             return response(['message' => 'File not found'], 404);
-        }
-        if (env('APP_ENV') === 'public') {
-            if ($file->file_path) {
-                $file->update(['played_at' => Carbon::today()]);
-                return response(['path' => 'https://sound-trackdle-api-production.up.railway.app/storage/tracks/'. $file->file_path], 200);
-            }
-            return response(['message' => 'File not found'], 404);
-        }
-
-        return response(['message' => 'File not found'], 404);
-
     }
 
     public function getFile(): Response
