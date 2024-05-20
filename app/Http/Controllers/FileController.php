@@ -34,7 +34,6 @@ class FileController extends Controller
             if (Storage::exists('/public/'.$file->file_path)) {
                 $file->update(['played_at' => Carbon::today()]);
                 return response(['path' => Storage::url($file->file_path)], 200);
-
             }
             return response(['message' => 'File not found'], 404);
     }
