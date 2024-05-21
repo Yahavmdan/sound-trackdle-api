@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\FileController;
 use App\Http\Controllers\MovieController;
+use App\Http\Controllers\UserController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -14,12 +15,17 @@ use Illuminate\Support\Facades\Route;
 | be assigned to the "api" middleware group. Make something great!
 |
 */
-Route::post('health', [FileController::class, 'health']);
 
-Route::post('upload', [FileController::class, 'upload']);
+// public
+Route::post('health', [FileController::class, 'health']);
+Route::post('user/login', [UserController::class, 'loginUser']);
 Route::get('movie', [MovieController::class, 'getMovieNamesAndIds']);
 Route::post('stream', [FileController::class, 'stream']);
 Route::get('file', [FileController::class, 'getFile']);
 Route::post('file/id', [FileController::class, 'getFileById']);
+
+Route::group(['middleware' => ['auth:sanctum', 'ability:user']], function () {
+    Route::post('upload', [FileController::class, 'upload']);
+});
 
 

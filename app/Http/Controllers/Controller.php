@@ -2,8 +2,7 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Student;
-use App\Models\Teacher;
+use App\Models\User;
 use Exception;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
@@ -88,7 +87,7 @@ class Controller extends BaseController
     public function okResponse(?string $message = null): JsonResponse
     {
         return response()->json([
-            'status code' => Response::HTTP_OK,
+            'code' => Response::HTTP_OK,
             'message' => $message ?? 'success'
         ]);
     }
@@ -101,7 +100,7 @@ class Controller extends BaseController
     public function errorResponse(?Exception $e = null, ?string $message = null): JsonResponse
     {
         return response()->json([
-            'status code' => Response::HTTP_BAD_REQUEST,
+            'code' => Response::HTTP_BAD_REQUEST,
             'exception' => $e ?? null,
             'message' => $message ?? 'bad request'
         ]);
@@ -109,25 +108,25 @@ class Controller extends BaseController
 
     /**
      * Generates a JSON response indicating a successful authentication with a 200 OK status.
-     * @param Teacher|Student $model The authenticated user model (Teacher or Student).
+     * @param User $model The authenticated user model (Teacher or Student).
      * @return JsonResponse The JSON response with a success message, status code, and authentication token.
      */
-    private function authenticationResponse(Teacher|Student $model): JsonResponse
+    private function authenticationResponse(User $model): JsonResponse
     {
         return response()->json([
-            'status code' => Response::HTTP_OK,
+            'code' => Response::HTTP_OK,
             'message' => 'success',
-            'token' => $model->createToken($model->full_name, [$model->entity])->plainTextToken
+            'token' => $model->createToken($model->username, [$model->entity])->plainTextToken
         ]);
     }
 
     /**
      * Login to the app.
      * @param array $values
-     * @param Teacher|Student|null $model
+     * @param User|null $model
      * @return JsonResponse
      */
-    public function login(array $values, Teacher | Student $model = null): JsonResponse
+    public function login(array $values, User $model = null): JsonResponse
     {
         if (!$model || !Auth::guard($model->entity.'s')->attempt($values)) {
             return $this->errorResponse();
