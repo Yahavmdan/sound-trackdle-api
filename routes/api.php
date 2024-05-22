@@ -22,6 +22,7 @@ Route::post('user/login', [UserController::class, 'loginUser']);
 Route::get('movie', [MovieController::class, 'getMovieNamesAndIds']);
 Route::post('stream', [FileController::class, 'stream']);
 Route::get('file', [FileController::class, 'getFile']);
+Route::get('files', [FileController::class, 'getRecentFiles']);
 Route::post('file/id', [FileController::class, 'getFileById']);
 
 Route::group(['middleware' => ['auth:sanctum', 'ability:user']], function () {

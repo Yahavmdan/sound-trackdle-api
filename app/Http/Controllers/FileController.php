@@ -32,12 +32,28 @@ class FileController extends Controller
         /* @var File $file */
         $file = File::query()->where('id', $request->get('id'))->first();
         if (Storage::disk('public')->exists($file->file_path)) {
-            $file->update(['played_at' => Carbon::today()]);
+            if (!$file->played_at) {
+                $file->update(['played_at' => Carbon::today()]);
+            }
             $fileUrl = Storage::disk('public')->url($file->file_path);
             return response(['path' => $fileUrl], 200);
         }
 
         return response(['message' => 'File not found'], 404);
+    }
+
+    public function getRecentFiles(): Response
+    {
+        /* @var File $files */
+        $files = File::query()
+            ->where('played_at', '<', Carbon::today())
+            ->whereNotNull('file_path')
+            ->select('id', 'main_actor', 'year', 'plot', 'played_at')
+            ->limit(7)
+            ->get();
+        if (!$files) return response(['message' => 'Files not found'], 404);
+
+        return response($files, 200);
     }
 
     public function getFile(): Response
