@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Helpers\Helpers;
+use App\Http\Requests\File\UploadRequest;
 use App\Models\File;
 use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
@@ -12,13 +13,13 @@ use Illuminate\Support\Facades\Storage;
 
 class FileController extends Controller
 {
-    public function upload(Request $request): JsonResponse
+    public function upload(UploadRequest $request): JsonResponse
     {
         if ($request->hasFile('file')) {
             $file = $request->file('file');
             $fileName = $file->getClientOriginalName();
             $file->storeAs('tracks', $fileName, 'public');
-            $model = File::query()->where('name', Helpers::snakeToTitleCase($fileName))->first();
+            $model = File::query()->where('id', Helpers::getFirstPart($fileName))->first();
             $model->update(['file_path' => 'tracks/' . $fileName]);
 
             return response()->json(['message' => 'File uploaded successfully']);
@@ -48,7 +49,7 @@ class FileController extends Controller
         $files = File::query()
             ->where('played_at', '<', Carbon::today())
             ->whereNotNull('file_path')
-            ->select('id', 'main_actor', 'year', 'plot', 'played_at')
+            ->select('id', 'main_actor', 'year', 'genre', 'played_at')
             ->limit(7)
             ->get();
         if (!$files) return response(['message' => 'Files not found'], 404);
@@ -64,7 +65,7 @@ class FileController extends Controller
                 ->whereNull('played_at')
                 ->orWhere('played_at', '>=', Carbon::today()))
             ->whereNotNull('file_path')
-            ->select('id', 'main_actor', 'year', 'plot')
+            ->select('id', 'main_actor', 'year', 'genre')
             ->first();
         if (!$file) return response(['message' => 'File not found'], 404);
 

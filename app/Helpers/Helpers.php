@@ -20,16 +20,14 @@ class Helpers
         return null;
     }
 
-    static function snakeToTitleCase($string): string
-    {
-        $string = str_replace('_', ' ', $string);
-
-        $string = ucwords($string);
-
-        if (($pos = strpos($string, '.')) !== false) {
-            $string = substr($string, 0, $pos);
-        }
-
-        return $string;
+    /**
+     * This method takes a file name that must start with {number}{_}{name}.
+     * example: 34_Avatar.mp3, the number must be the same as item id.
+     * @param string $input
+     * @return int
+     */
+    static function getFirstPart(string $input): int {
+        $firstPart = explode('_', $input)[0];
+        return intval($firstPart);
     }
 }

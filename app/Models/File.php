@@ -4,8 +4,6 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 
 /**
  * @property int id
@@ -15,7 +13,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsToMany;
  * @property int played_at
  * @property string type
  * @property string main_actor
- * @property string plot
+ * @property string genre
  */
 class File extends Model
 {
@@ -28,6 +26,6 @@ class File extends Model
         'played_at',
         'type',
         'main_actor',
-        'plot',
+        'genre',
     ];
 }

@@ -10,12 +10,12 @@ class CreateFilesTable extends Migration
     {
         Schema::create('files', function (Blueprint $table) {
             $table->id();
-            $table->string('name');
+            $table->string('name')->unique();
             $table->string('type');
             $table->integer('year');
             $table->string('file_path')->nullable();
             $table->string('main_actor');
-            $table->string('plot');
+            $table->string('genre');
             $table->date('played_at')->nullable();
             $table->timestamps();
         });

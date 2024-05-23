@@ -2,15 +2,13 @@
 
 namespace App\Http\Controllers;
 
-use Illuminate\Http\JsonResponse;
-use Illuminate\Http\Request;
+use Illuminate\Database\Query\Builder;
 use Illuminate\Http\Response;
 use Illuminate\Support\Facades\DB;
-use PhpParser\Builder;
 
 class MovieController extends Controller
 {
-    public function index(): \Illuminate\Database\Query\Builder
+    public function index(): Builder
     {
         return DB::table('files')->where('type', 'movie');
     }
