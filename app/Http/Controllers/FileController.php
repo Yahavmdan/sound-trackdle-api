@@ -50,8 +50,11 @@ class FileController extends Controller
             ->where('played_at', '<', Carbon::today())
             ->whereNotNull('file_path')
             ->select('id', 'main_actor', 'year', 'genre', 'played_at')
-            ->limit(7)
-            ->get();
+            ->orderBy('played_at', 'desc')
+            ->limit(9)
+            ->get()
+            ->reverse()
+            ->values();
         if (!$files) return response(['message' => 'Files not found'], 404);
 
         return response($files, 200);
