@@ -15,17 +15,30 @@ class FileController extends Controller
 {
     public function upload(UploadRequest $request): JsonResponse
     {
-        if ($request->hasFile('file')) {
-            $file = $request->file('file');
-            $fileName = $file->getClientOriginalName();
-            $file->storeAs('tracks', $fileName, 'public');
-            $model = File::query()->where('id', Helpers::getFirstPart($fileName))->first();
-            $model->update(['file_path' => 'tracks/' . $fileName]);
+        if ($request->hasFile('files')) {
+            $files = $request->file('files');
+            foreach ($files as $file) {
+                $fileName = $file->getClientOriginalName();
+                $file->storeAs('tracks', $fileName, 'public');
+                $model = File::query()->where('id', Helpers::getFirstPart($fileName))->first();
+                $model->update(['file_path' => 'tracks/' . $fileName]);
+            }
 
-            return response()->json(['message' => 'File uploaded successfully']);
+            return response()->json(['message' => 'Files uploaded successfully']);
         }
 
-        return response()->json(['message' => 'No file uploaded'], 400);
+        return response()->json(['message' => 'No files uploaded'], 400);
+    }
+
+    public function massDelete(): JsonResponse
+    {
+        $files = Storage::disk('public')->files('tracks');
+
+        foreach ($files as $file) {
+            Storage::disk('public')->delete($file);
+        }
+
+        return response()->json(['message' => 'All files deleted successfully']);
     }
 
     public function stream(Request $request): Response|string
