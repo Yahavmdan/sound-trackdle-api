@@ -41,6 +41,12 @@ class FileController extends Controller
         return response()->json(['message' => 'All files deleted successfully']);
     }
 
+    public function index(): JsonResponse
+    {
+        $files = Storage::disk('public')->files('tracks');
+        return response()->json(['files' => $files]);
+    }
+
     public function stream(Request $request): Response|string
     {
         /* @var File $file */

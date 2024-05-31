@@ -28,6 +28,7 @@ Route::post('file/id', [FileController::class, 'getFileById']);
 Route::group(['middleware' => ['auth:sanctum', 'ability:user']], function () {
     Route::post('upload', [FileController::class, 'upload']);
     Route::delete('delete/all', [FileController::class, 'massDelete']);
+    Route::get('file/index', [FileController::class, 'index']);
 });
 
 
