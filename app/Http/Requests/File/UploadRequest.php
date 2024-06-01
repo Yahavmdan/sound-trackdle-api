@@ -13,7 +13,7 @@ class UploadRequest extends BaseRequest
     public function rules(): array
     {
         return [
-            'files.*' => 'required|file|mimes:mp3',
+            'file' => 'required|file|mimes:zip|max:10240',
         ];
     }
 }

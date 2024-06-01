@@ -10,24 +10,46 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Storage;
+use ZipArchive;
 
 class FileController extends Controller
 {
     public function upload(UploadRequest $request): JsonResponse
     {
-        if ($request->hasFile('files')) {
-            $files = $request->file('files');
-            foreach ($files as $file) {
-                $fileName = $file->getClientOriginalName();
-                $file->storeAs('tracks', $fileName, 'public');
-                $model = File::query()->where('id', Helpers::getFirstPart($fileName))->first();
-                $model->update(['file_path' => 'tracks/' . $fileName]);
-            }
-
-            return response()->json(['message' => 'Files uploaded successfully']);
+        if (!$request->hasFile('file')) {
+            return response()->json(['message' => 'No file uploaded'], 400);
         }
 
-        return response()->json(['message' => 'No files uploaded'], 400);
+        $file = $request->file('file');
+        $zip = new ZipArchive;
+        $filePath = $file->getRealPath();
+
+        if ($zip->open($filePath) !== TRUE) {
+            return response()->json(['message' => 'Failed to open ZIP file'], 400);
+        }
+
+        $extractPath = storage_path('app/public/tracks/');
+        $zip->extractTo($extractPath);
+        $zip->close();
+
+        $extractedFiles = array_diff(scandir($extractPath), array('.', '..'));
+
+        foreach ($extractedFiles as $extractedFile) {
+            $filePath = 'tracks/' . $extractedFile;
+            $fileExtension = pathinfo($extractedFile, PATHINFO_EXTENSION);
+
+            if (strtolower($fileExtension) != 'mp3') {
+                Storage::disk('public')->delete($filePath);
+                continue;
+            }
+
+            $model = File::query()->where('id', Helpers::getFirstPart($extractedFile))->first();
+            if ($model) {
+                $model->update(['file_path' => $filePath]);
+            }
+        }
+
+        return response()->json(['message' => 'Files uploaded and extracted successfully']);
     }
 
     public function massDelete(): JsonResponse
@@ -36,6 +58,7 @@ class FileController extends Controller
 
         foreach ($files as $file) {
             Storage::disk('public')->delete($file);
+            File::query()->where('file_path', $file)->update(['file_path' => null]);
         }
 
         return response()->json(['message' => 'All files deleted successfully']);
