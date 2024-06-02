@@ -82,7 +82,7 @@ class Helpers
 
     private static function updateFileModel($fileName, $filePath): void
     {
-        $model = File::query()->where('id', Helpers::getFirstPart($fileName))->first();
+        $model = File::query()->where('id', self::getFirstPart($fileName))->first();
         $model?->update(['file_path' => $filePath]);
     }
 }

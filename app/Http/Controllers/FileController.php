@@ -103,9 +103,9 @@ class FileController extends Controller
                 ->orderBy('played_at')
                 ->select('id', 'main_actor', 'year', 'genre')
                 ->first();
+            $file?->update(['played_at' => Carbon::today()]);
             if (!$file) return response(['message' => 'File not found'], 404);
         }
-        $file->update(['played_at' => Carbon::today()]);
         return response($file, 200);
     }
 
