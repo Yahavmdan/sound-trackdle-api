@@ -6,17 +6,14 @@ use App\Helpers\Helpers;
 use App\Http\Requests\File\UploadRequest;
 use App\Models\File;
 use Carbon\Carbon;
-use Exception;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Storage;
+use ZipArchive;
 
 class FileController extends Controller
 {
-    /**
-     * @throws Exception
-     */
     public function upload(UploadRequest $request): JsonResponse
     {
         if (!$request->hasFile('file')) {
@@ -24,17 +21,35 @@ class FileController extends Controller
         }
 
         $file = $request->file('file');
-        $fileExtension = $file->getClientOriginalExtension();
+        $zip = new ZipArchive;
+        $filePath = $file->getRealPath();
 
-        if (strtolower($fileExtension) === 'zip') {
-            Helpers::handleZipFile($file);
-        } elseif (strtolower($fileExtension) === 'mp3') {
-            Helpers::handleMp3File($file);
-        } else {
-            return response()->json(['message' => 'Invalid file type. Only ZIP and MP3 files are allowed.'], 400);
+        if ($zip->open($filePath) !== TRUE) {
+            return response()->json(['message' => 'Failed to open ZIP file'], 400);
         }
 
-        return response()->json(['message' => 'Files uploaded successfully']);
+        $extractPath = storage_path('app/public/tracks/');
+        $zip->extractTo($extractPath);
+        $zip->close();
+
+        $extractedFiles = array_diff(scandir($extractPath), array('.', '..'));
+
+        foreach ($extractedFiles as $extractedFile) {
+            $filePath = 'tracks/' . $extractedFile;
+            $fileExtension = pathinfo($extractedFile, PATHINFO_EXTENSION);
+
+            if (strtolower($fileExtension) != 'mp3') {
+                Storage::disk('public')->delete($filePath);
+                continue;
+            }
+
+            $model = File::query()->where('id', Helpers::getFirstPart($extractedFile))->first();
+            if ($model) {
+                $model->update(['file_path' => $filePath]);
+            }
+        }
+
+        return response()->json(['message' => 'Files uploaded and extracted successfully']);
     }
 
     public function massDelete(): JsonResponse
