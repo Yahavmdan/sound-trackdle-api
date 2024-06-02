@@ -6,14 +6,17 @@ use App\Helpers\Helpers;
 use App\Http\Requests\File\UploadRequest;
 use App\Models\File;
 use Carbon\Carbon;
+use Exception;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Storage;
-use ZipArchive;
 
 class FileController extends Controller
 {
+    /**
+     * @throws Exception
+     */
     public function upload(UploadRequest $request): JsonResponse
     {
         if (!$request->hasFile('file')) {
@@ -21,35 +24,17 @@ class FileController extends Controller
         }
 
         $file = $request->file('file');
-        $zip = new ZipArchive;
-        $filePath = $file->getRealPath();
+        $fileExtension = $file->getClientOriginalExtension();
 
-        if ($zip->open($filePath) !== TRUE) {
-            return response()->json(['message' => 'Failed to open ZIP file'], 400);
+        if (strtolower($fileExtension) === 'zip') {
+            Helpers::handleZipFile($file);
+        } elseif (strtolower($fileExtension) === 'mp3') {
+            Helpers::handleMp3File($file);
+        } else {
+            return response()->json(['message' => 'Invalid file type. Only ZIP and MP3 files are allowed.'], 400);
         }
 
-        $extractPath = storage_path('app/public/tracks/');
-        $zip->extractTo($extractPath);
-        $zip->close();
-
-        $extractedFiles = array_diff(scandir($extractPath), array('.', '..'));
-
-        foreach ($extractedFiles as $extractedFile) {
-            $filePath = 'tracks/' . $extractedFile;
-            $fileExtension = pathinfo($extractedFile, PATHINFO_EXTENSION);
-
-            if (strtolower($fileExtension) != 'mp3') {
-                Storage::disk('public')->delete($filePath);
-                continue;
-            }
-
-            $model = File::query()->where('id', Helpers::getFirstPart($extractedFile))->first();
-            if ($model) {
-                $model->update(['file_path' => $filePath]);
-            }
-        }
-
-        return response()->json(['message' => 'Files uploaded and extracted successfully']);
+        return response()->json(['message' => 'Files uploaded successfully']);
     }
 
     public function massDelete(): JsonResponse
@@ -112,8 +97,15 @@ class FileController extends Controller
             ->whereNotNull('file_path')
             ->select('id', 'main_actor', 'year', 'genre')
             ->first();
-        if (!$file) return response(['message' => 'File not found'], 404);
-
+        if (!$file) {
+            $file = File::query()
+                ->whereNotNull('played_at')
+                ->orderBy('played_at')
+                ->select('id', 'main_actor', 'year', 'genre')
+                ->first();
+            if (!$file) return response(['message' => 'File not found'], 404);
+        }
+        $file->update(['played_at' => Carbon::today()]);
         return response($file, 200);
     }
 
