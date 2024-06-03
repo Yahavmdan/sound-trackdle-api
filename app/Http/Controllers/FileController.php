@@ -112,9 +112,21 @@ class FileController extends Controller
             ->whereNotNull('file_path')
             ->select('id', 'main_actor', 'year', 'genre')
             ->first();
-        if (!$file) return response(['message' => 'File not found'], 404);
 
-        return response($file, 200);
+        if ($file) return response($file, 200);
+
+        $file = File::query()
+            ->whereNotNull('played_at')
+            ->orderBy('played_at')
+            ->select('id', 'main_actor', 'year', 'genre')
+            ->first();
+
+        if ($file) {
+            $file->update(['played_at' => Carbon::today()]);
+            return response($file, 200);
+        }
+
+        return response(['message' => 'File not found'], 404);
     }
 
     public function getFileById(Request $request): Response
