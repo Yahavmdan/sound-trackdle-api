@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Helpers\Helpers;
 use App\Models\User;
 use Exception;
 use Illuminate\Database\Eloquent\Builder;
@@ -132,5 +133,18 @@ class Controller extends BaseController
             return $this->errorResponse();
         }
         return $this->authenticationResponse($model);
+    }
+
+    /**
+     * Get app version.
+     * @return JsonResponse
+     */
+    public function getAppVersion(): JsonResponse
+    {
+        $appVersion = Helpers::getAppVersion();
+        if (!$appVersion) {
+            return $this->errorResponse(null, 'unexpected error during extracting app version');
+        }
+        return $this->okResponse($appVersion);
     }
 }

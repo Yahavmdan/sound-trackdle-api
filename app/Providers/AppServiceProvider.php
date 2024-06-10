@@ -14,6 +14,11 @@ class AppServiceProvider extends ServiceProvider
         //
     }
 
+    static public function appVersion(): string
+    {
+        return '1.0.0';
+    }
+
     /**
      * Bootstrap any application services.
      */

@@ -36,17 +36,8 @@ class FileController extends Controller
 
         foreach ($extractedFiles as $extractedFile) {
             $filePath = 'tracks/' . $extractedFile;
-            $fileExtension = pathinfo($extractedFile, PATHINFO_EXTENSION);
-
-            if (strtolower($fileExtension) != 'mp3') {
-                Storage::disk('public')->delete($filePath);
-                continue;
-            }
-
             $model = File::query()->where('id', Helpers::getFirstPart($extractedFile))->first();
-            if ($model) {
-                $model->update(['file_path' => $filePath]);
-            }
+            $model?->update(['file_path' => $filePath]);
         }
 
         return response()->json(['message' => 'Files uploaded and extracted successfully']);

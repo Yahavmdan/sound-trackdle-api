@@ -2,6 +2,9 @@
 
 namespace App\Helpers;
 
+use App\Providers\AppServiceProvider;
+use Illuminate\Support\Facades\App;
+
 class Helpers
 {
     static function toSnakeCase(string $string): string
@@ -29,5 +32,10 @@ class Helpers
     static function getFirstPart(string $input): int {
         $firstPart = explode('_', $input)[0];
         return intval($firstPart);
+    }
+
+    static function getAppVersion(): string
+    {
+        return AppServiceProvider::appVersion();
     }
 }

@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Controller;
 use App\Http\Controllers\FileController;
 use App\Http\Controllers\MovieController;
 use App\Http\Controllers\UserController;
@@ -17,7 +18,8 @@ use Illuminate\Support\Facades\Route;
 */
 
 // public
-Route::post('health', [FileController::class, 'health']);
+Route::post('version', [Controller::class, 'getAppVersion']);
+
 Route::post('user/login', [UserController::class, 'loginUser']);
 Route::get('movie', [MovieController::class, 'getMovieNamesAndIds']);
 Route::post('stream', [FileController::class, 'stream']);
