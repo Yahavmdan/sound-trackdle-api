@@ -18,7 +18,7 @@ use Illuminate\Support\Facades\Route;
 */
 
 // public
-Route::post('version', [Controller::class, 'getAppVersion']);
+Route::get('version', [Controller::class, 'getAppVersion']);
 
 Route::post('user/login', [UserController::class, 'loginUser']);
 Route::get('movie', [MovieController::class, 'getMovieNamesAndIds']);
