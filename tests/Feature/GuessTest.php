@@ -17,7 +17,8 @@ class GuessTest extends TestCase
     {
         parent::setUp();
         $base = ['type' => 'movie', 'main_actor' => 'A', 'genre' => 'G'];
-        $this->answer = File::query()->create($base + ['name' => 'Avatar', 'year' => 2009, 'file_path' => 'tracks/0000000000000001.mp3']);
+        $this->answer = File::query()->create($base + ['name' => 'Avatar', 'year' => 2009, 'file_path' => 'tracks/0000000000000001.mp3',
+            'difficulty' => 'easy', 'poster_url' => 'https://img/p.jpg', 'imdb_id' => 'tt0499549']);
         $this->other = File::query()->create($base + ['name' => 'Titanic', 'year' => 1997, 'file_path' => 'tracks/0000000000000002.mp3']);
     }
 
@@ -27,12 +28,16 @@ class GuessTest extends TestCase
         $this->assertArrayNotHasKey('id', $res->json());
         $this->assertArrayNotHasKey('name', $res->json());
         $this->assertSame($this->answer->token, $res->json('token'));
+        $this->assertSame('easy', $res->json('difficulty'));
+        $this->assertArrayNotHasKey('poster_url', $res->json());
+        $this->assertArrayNotHasKey('imdb_id', $res->json());
     }
 
     public function test_correct_guess_reveals(): void
     {
         $this->postJson('/api/guess', ['token' => $this->answer->token, 'movie_id' => $this->answer->id, 'step' => 0])
-            ->assertOk()->assertExactJson(['correct' => true, 'name' => 'Avatar', 'year' => 2009]);
+            ->assertOk()->assertExactJson(['correct' => true, 'name' => 'Avatar', 'year' => 2009,
+                'poster_url' => 'https://img/p.jpg', 'imdb_url' => 'https://www.imdb.com/title/tt0499549/']);
     }
 
     public function test_wrong_guess_hides_name(): void
@@ -49,7 +54,8 @@ class GuessTest extends TestCase
         }
         // 4th (last) guess is made at step 3
         $this->postJson('/api/guess', ['token' => $this->answer->token, 'movie_id' => $this->other->id, 'step' => 3])
-            ->assertOk()->assertExactJson(['correct' => false, 'name' => 'Avatar', 'year' => 2009]);
+            ->assertOk()->assertExactJson(['correct' => false, 'name' => 'Avatar', 'year' => 2009,
+                'poster_url' => 'https://img/p.jpg', 'imdb_url' => 'https://www.imdb.com/title/tt0499549/']);
     }
 
     public function test_no_reveal_last_step_without_guesses(): void

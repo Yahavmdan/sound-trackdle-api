@@ -34,7 +34,12 @@ class GuessController extends Controller
 
         $response = ['correct' => $correct];
         if ($correct || $gameOver) {
-            $response += ['name' => $file->name, 'year' => $file->year];
+            $response += [
+                'name' => $file->name,
+                'year' => $file->year,
+                'poster_url' => $file->poster_url,
+                'imdb_url' => $file->imdbUrl(),
+            ];
         }
         return response()->json($response);
     }

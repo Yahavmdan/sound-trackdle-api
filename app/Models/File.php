@@ -20,6 +20,9 @@ use Illuminate\Support\Str;
  * @property string|null source_url
  * @property float|null clip_start
  * @property string token
+ * @property string|null difficulty
+ * @property string|null poster_url
+ * @property string|null imdb_id
  */
 class File extends Model
 {
@@ -36,6 +39,9 @@ class File extends Model
         'tmdb_id',
         'source_url',
         'clip_start',
+        'difficulty',
+        'poster_url',
+        'imdb_id',
     ];
 
     protected static function booted(): void
@@ -43,6 +49,11 @@ class File extends Model
         static::creating(function (File $file) {
             $file->token ??= Str::random(32);
         });
+    }
+
+    public function imdbUrl(): ?string
+    {
+        return $this->imdb_id ? "https://www.imdb.com/title/{$this->imdb_id}/" : null;
     }
 
     /** Rows that have an uploaded clip. */

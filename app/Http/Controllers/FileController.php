@@ -15,7 +15,7 @@ use ZipArchive;
 class FileController extends Controller
 {
     /** Fields that are safe to send before the game ends (no id, no name). */
-    private const PUBLIC_FIELDS = ['token', 'main_actor', 'year', 'genre'];
+    private const PUBLIC_FIELDS = ['token', 'main_actor', 'year', 'genre', 'difficulty'];
 
     public function upload(UploadRequest $request): JsonResponse
     {

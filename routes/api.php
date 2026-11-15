@@ -34,6 +34,7 @@ Route::group(['middleware' => ['auth:sanctum', 'ability:user']], function () {
     Route::delete('delete/all', [FileController::class, 'massDelete']);
     Route::get('file/index', [FileController::class, 'index']);
     Route::post('admin/tracks', [AdminTrackController::class, 'store']);
+    Route::delete('admin/tracks/{id}', [AdminTrackController::class, 'destroy'])->whereNumber('id');
 });
 
 

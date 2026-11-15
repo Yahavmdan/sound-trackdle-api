@@ -31,6 +31,9 @@ class AdminTrackTest extends TestCase
             'genre' => 'Science Fiction, Action',
             'source_url' => 'https://www.youtube.com/watch?v=abc',
             'clip_start' => 42.5,
+            'difficulty' => 'easy',
+            'poster_url' => 'https://upload.wikimedia.org/poster.jpg',
+            'imdb_id' => 'tt0133093',
         ], $overrides);
     }
 
@@ -70,5 +73,61 @@ class AdminTrackTest extends TestCase
     public function test_requires_auth(): void
     {
         $this->postJson('/api/admin/tracks', $this->payload())->assertUnauthorized();
+    }
+
+    public function test_stores_difficulty_poster_imdb(): void
+    {
+        Storage::fake('public');
+        $this->actAsAdmin();
+        $id = $this->post('/api/admin/tracks', $this->payload())->assertOk()->json('id');
+
+        $file = File::query()->findOrFail($id);
+        $this->assertSame('easy', $file->difficulty);
+        $this->assertSame('tt0133093', $file->imdb_id);
+        $this->assertSame('https://upload.wikimedia.org/poster.jpg', $file->poster_url);
+    }
+
+    public function test_metadata_only_update_for_existing_row(): void
+    {
+        $this->actAsAdmin();
+        $seeded = File::query()->create([
+            'name' => 'The Matrix', 'type' => 'movie', 'year' => 1999,
+            'main_actor' => 'Hand Written', 'genre' => 'Hand Genre', 'file_path' => 'tracks/0000000000000001.mp3',
+        ]);
+        $payload = $this->payload(['difficulty' => 'medium']);
+        unset($payload['file'], $payload['source_url'], $payload['clip_start']);
+
+        $this->post('/api/admin/tracks', $payload)->assertOk()->assertJson(['id' => $seeded->id, 'created' => false]);
+
+        $seeded->refresh();
+        $this->assertSame('medium', $seeded->difficulty);
+        $this->assertSame('tracks/0000000000000001.mp3', $seeded->file_path);
+    }
+
+    public function test_metadata_only_for_unknown_movie_is_rejected(): void
+    {
+        $this->actAsAdmin();
+        $payload = $this->payload();
+        unset($payload['file']);
+        $this->postJson('/api/admin/tracks', $payload)->assertStatus(422);
+    }
+
+    public function test_invalid_difficulty_rejected(): void
+    {
+        $this->actAsAdmin();
+        $this->postJson('/api/admin/tracks', $this->payload(['difficulty' => 'insane']))->assertStatus(422);
+    }
+
+    public function test_delete_removes_clip(): void
+    {
+        Storage::fake('public');
+        $this->actAsAdmin();
+        $id = $this->post('/api/admin/tracks', $this->payload())->json('id');
+        $path = File::query()->find($id)->file_path;
+
+        $this->deleteJson("/api/admin/tracks/$id")->assertOk();
+
+        $this->assertNull(File::query()->find($id)->file_path);
+        Storage::disk('public')->assertMissing($path);
     }
 }
