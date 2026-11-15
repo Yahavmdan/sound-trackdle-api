@@ -1,6 +1,7 @@
 """Pipeline stages: fetch -> cut -> publish."""
 import json
 import os
+import shutil
 import urllib.error
 
 from . import media
@@ -43,8 +44,45 @@ def fetch(state: State, c: Candidate, work_dir: str, log=print) -> None:
     log(f"  + {c.title}: {best.get('title')} ({best.get('channel')})")
 
 
+def _remove(path: str | None) -> None:
+    if path and os.path.exists(path):
+        os.remove(path)
+
+
+def cleanup(state: State, work_dir: str, log=print) -> None:
+    """Free disk: full tracks once cut, clips once published/rejected, and the HTTP cache."""
+    freed = 0
+    for c in state.all():
+        if c.status != "fetched" and c.audio_path:
+            freed += os.path.getsize(c.audio_path) if os.path.exists(c.audio_path) else 0
+            _remove(c.audio_path)
+            c.audio_path = None
+            state.save(c)
+        if c.status in ("published", "rejected", "failed") and c.clip_path:
+            freed += os.path.getsize(c.clip_path) if os.path.exists(c.clip_path) else 0
+            _remove(c.clip_path)
+            c.clip_path = None
+            state.save(c)
+    known = {c.audio_path for c in state.all() if c.audio_path} | {c.clip_path for c in state.all() if c.clip_path}
+    for sub in ("audio", "clips"):
+        d = os.path.join(work_dir, sub)
+        for name in os.listdir(d) if os.path.isdir(d) else []:
+            path = os.path.join(d, name)
+            if path not in known:
+                freed += os.path.getsize(path)
+                os.remove(path)
+    cache = os.path.join(work_dir, "http-cache")
+    if os.path.isdir(cache):
+        freed += sum(os.path.getsize(os.path.join(r, f)) for r, _, fs in os.walk(cache) for f in fs)
+        shutil.rmtree(cache)
+    log(f"cleanup: freed {freed / 1e6:.0f} MB")
+
+
 def cut(state: State, c: Candidate, work_dir: str, start: float | None = None, log=print) -> None:
+    """Cut the clip, then delete the full track (re-downloaded on demand for a re-cut)."""
     try:
+        if not (c.audio_path and os.path.exists(c.audio_path)):
+            c.audio_path = media.download_audio(c.video_id, os.path.join(work_dir, "audio"))
         if start is None:
             heatmap = json.loads(c.heatmap or "[]")
             rms = None if heatmap else media.rms_per_second(c.audio_path)
@@ -54,6 +92,8 @@ def cut(state: State, c: Candidate, work_dir: str, start: float | None = None, l
         c.clip_start, c.status, c.reason = round(start, 2), "cut", None
     except ValueError as e:
         c.status, c.reason = "failed", str(e)
+    _remove(c.audio_path)
+    c.audio_path = None
     state.save(c)
     log(f"  {'~' if c.status == 'cut' else 'x'} {c.title}: start {c.clip_start} {c.reason or ''}")
 
@@ -109,6 +149,8 @@ def publish(state: State, api_url: str, username: str, password: str, log=print)
                 "difficulty": c.difficulty, "poster_url": c.poster_url, "imdb_id": c.imdb_id,
             }, "file", c.clip_path, headers)
             c.status, c.reason, c.api_id = "published", None, res.get("id")
+            _remove(c.clip_path)
+            c.clip_path = None
             done += 1
             log(f"  ^ {c.title} -> id {res.get('id')} ({'new' if res.get('created') else 'updated'})")
         except urllib.error.HTTPError as e:

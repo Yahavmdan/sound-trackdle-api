@@ -7,6 +7,7 @@
   py cli.py review                  open the review page (approve / reject / re-cut)
   py cli.py publish                 upload approved clips to the API
   py cli.py backfill                set difficulty/poster/IMDb on movies already in the API
+  py cli.py cleanup                 delete downloaded tracks, published clips and HTTP cache
   py cli.py status                  counts per status
 """
 import argparse
@@ -41,7 +42,7 @@ def main() -> None:
     state = State(os.path.join(work, "pipeline.db"))
 
     p = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    p.add_argument("command", choices=["discover", "fetch", "cut", "run", "review", "publish", "backfill", "status"])
+    p.add_argument("command", choices=["discover", "fetch", "cut", "run", "review", "publish", "backfill", "cleanup", "status"])
     p.add_argument("--target", type=int, default=10)
     args = p.parse_args()
 
@@ -78,6 +79,9 @@ def main() -> None:
 
     if args.command == "backfill":
         print(f"backfilled {stages.backfill(api_url, env['API_USERNAME'], env['API_PASSWORD'])}")
+
+    if args.command in ("run", "publish", "backfill", "cleanup"):
+        stages.cleanup(state, work)
 
     counts = collections.Counter(c.status for c in state.all())
     print("status:", dict(counts))

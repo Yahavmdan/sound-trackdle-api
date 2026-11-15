@@ -37,7 +37,33 @@ def difficulty(sitelinks: int) -> str:
     return "hard"
 
 
+_WIKITEXT: dict[str, str] = {}
+
+
+def prefetch_wikitext(titles: list[str]) -> None:
+    """Batch-load article wikitext (50 per request) so per-film lookups need no extra calls."""
+    todo = [t for t in dict.fromkeys(titles) if t and t not in _WIKITEXT]
+    for i in range(0, len(todo), 50):
+        batch = todo[i:i + 50]
+        data = get_json(WIKIPEDIA_API, {"action": "query", "prop": "revisions", "rvprop": "content",
+                                        "rvslots": "main", "titles": "|".join(batch), "redirects": 1,
+                                        "format": "json", "formatversion": 2}, HEADERS)
+        q = data.get("query", {})
+        back: dict[str, str] = {}
+        for r in q.get("normalized", []) + q.get("redirects", []):
+            back[r["to"]] = back.get(r["from"], r["from"])
+        for page in q.get("pages", []):
+            revs = page.get("revisions") or [{}]
+            text = revs[0].get("slots", {}).get("main", {}).get("content", "")
+            _WIKITEXT[back.get(page["title"], page["title"])] = text
+        for t in batch:
+            _WIKITEXT.setdefault(t, "")
+        print(f"    wikitext {min(i + 50, len(todo))}/{len(todo)}", flush=True)
+
+
 def _infobox_wikitext(enwiki_title: str) -> str:
+    if enwiki_title in _WIKITEXT:
+        return _WIKITEXT[enwiki_title]
     try:
         data = get_json(WIKIPEDIA_API, {"action": "parse", "page": enwiki_title, "prop": "wikitext",
                                         "section": 0, "format": "json", "redirects": 1}, HEADERS)
@@ -55,6 +81,7 @@ def image_from_wikitext(wikitext: str) -> str | None:
 
 def _posters(enwiki_titles: list[str]) -> dict[str, str]:
     """enwiki title -> poster thumbnail URL (infobox image; non-free posters included)."""
+    prefetch_wikitext(enwiki_titles)
     files = {t: image_from_wikitext(_infobox_wikitext(t)) for t in enwiki_titles}
     names = sorted({f"File:{f}" for f in files.values() if f})
     urls: dict[str, str] = {}
@@ -209,6 +236,7 @@ def _fill_details(picked: list[tuple[Candidate, dict]]) -> None:
     ids = sorted({i for cast, genres in wanted.values() for i in cast + genres})
     labels = {k: v.get("labels", {}).get("en", {}).get("value", "")
               for k, v in _entities({"props": "labels"}, "ids", ids).items()} if ids else {}
+    prefetch_wikitext([ent.get("sitelinks", {}).get("enwiki", {}).get("title") for _, ent in picked])
     for c, ent in picked:
         cast, genres = wanted[c.qid]
         enwiki = ent.get("sitelinks", {}).get("enwiki", {}).get("title")
