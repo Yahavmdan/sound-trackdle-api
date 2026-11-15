@@ -1,8 +1,11 @@
-"""One-off: set difficulty/poster/IMDb for prod movies whose names don't match a Wikipedia article."""
+"""Set difficulty/poster/IMDb for movies whose names don't match a Wikipedia article.
+
+  TARGET_API_PASSWORD=... py fix_metadata_mapping.py
+"""
 import os
 import sys
 
-sys.path.insert(0, r"C:\Users\PC-YV-DN\work\sound-trackdle-api\tools\track-pipeline")
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 sys.stdout.reconfigure(encoding="utf-8", errors="replace")
 
 from pipeline.discover import _candidate, _entities, fill_posters  # noqa: E402
