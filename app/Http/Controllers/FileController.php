@@ -14,31 +14,34 @@ use ZipArchive;
 
 class FileController extends Controller
 {
+    /** Fields that are safe to send before the game ends (no id, no name). */
+    private const PUBLIC_FIELDS = ['token', 'main_actor', 'year', 'genre'];
+
     public function upload(UploadRequest $request): JsonResponse
     {
         if (!$request->hasFile('file')) {
             return response()->json(['message' => 'No file uploaded'], 400);
         }
 
-        $file = $request->file('file');
         $zip = new ZipArchive;
-        $filePath = $file->getRealPath();
-
-        if ($zip->open($filePath) !== TRUE) {
+        if ($zip->open($request->file('file')->getRealPath()) !== TRUE) {
             return response()->json(['message' => 'Failed to open ZIP file'], 400);
         }
 
-        $extractPath = storage_path('app/public/tracks/');
-        $zip->extractTo($extractPath);
+        $tmp = storage_path('app/upload-' . bin2hex(random_bytes(4)));
+        $zip->extractTo($tmp);
         $zip->close();
 
-        $extractedFiles = array_diff(scandir($extractPath), array('.', '..'));
-
-        foreach ($extractedFiles as $extractedFile) {
-            $filePath = 'tracks/' . $extractedFile;
+        foreach (array_diff(scandir($tmp), ['.', '..']) as $extractedFile) {
             $model = File::query()->where('id', Helpers::getFirstPart($extractedFile))->first();
-            $model?->update(['file_path' => $filePath]);
+            if ($model) {
+                $path = Helpers::randomTrackPath();
+                Storage::disk('public')->put($path, file_get_contents("$tmp/$extractedFile"));
+                $model->update(['file_path' => $path]);
+            }
+            unlink("$tmp/$extractedFile");
         }
+        rmdir($tmp);
 
         return response()->json(['message' => 'Files uploaded and extracted successfully']);
     }
@@ -61,74 +64,61 @@ class FileController extends Controller
         return response()->json(['files' => $files]);
     }
 
-    public function stream(Request $request): Response|string
+    public function stream(Request $request): Response
     {
-        /* @var File $file */
-        $file = File::query()->where('id', $request->get('id'))->first();
-        if (Storage::disk('public')->exists($file->file_path)) {
-            if (!$file->played_at) {
-                $file->update(['played_at' => Carbon::today()]);
-            }
-            $fileUrl = Storage::disk('public')->url($file->file_path);
-            return response(['path' => $fileUrl], 200);
+        /* @var File|null $file */
+        $file = File::query()->where('token', (string)$request->get('token'))->playable()->first();
+        if (!$file || !Storage::disk('public')->exists($file->file_path)) {
+            return response(['message' => 'File not found'], 404);
         }
 
-        return response(['message' => 'File not found'], 404);
+        if (!$file->played_at) {
+            $file->update(['played_at' => Carbon::today()]);
+        }
+        return response(['path' => Storage::disk('public')->url($file->file_path)], 200);
     }
 
     public function getRecentFiles(): Response
     {
-        /* @var File $files */
         $files = File::query()
+            ->playable()
             ->where('played_at', '<', Carbon::today())
-            ->whereNotNull('file_path')
-            ->select('id', 'main_actor', 'year', 'genre', 'played_at')
+            ->select([...self::PUBLIC_FIELDS, 'played_at'])
             ->orderBy('played_at', 'desc')
             ->limit(9)
             ->get()
             ->reverse()
             ->values();
-        if (!$files) return response(['message' => 'Files not found'], 404);
 
         return response($files, 200);
     }
 
     public function getFile(): Response
     {
-        /* @var File $file */
+        /* @var File|null $file */
         $file = File::query()
+            ->playable()
             ->where(fn($query) => $query
                 ->whereNull('played_at')
                 ->orWhere('played_at', '>=', Carbon::today()))
-            ->whereNotNull('file_path')
-            ->select('id', 'main_actor', 'year', 'genre')
+            ->orderByRaw('played_at is null')
+            ->orderBy('id')
+            ->select(self::PUBLIC_FIELDS)
             ->first();
 
         if ($file) return response($file, 200);
 
         $file = File::query()
+            ->playable()
             ->whereNotNull('played_at')
             ->orderBy('played_at')
-            ->select('id', 'main_actor', 'year', 'genre')
             ->first();
 
         if ($file) {
             $file->update(['played_at' => Carbon::today()]);
-            return response($file, 200);
+            return response($file->only(self::PUBLIC_FIELDS), 200);
         }
 
         return response(['message' => 'File not found'], 404);
     }
-
-    public function getFileById(Request $request): Response
-    {
-        /* @var File $file */
-        $file = File::query()
-            ->where('id', $request->get('id'))
-            ->first();
-        if (!$file) return response(['message' => 'File not found'], 404);
-
-        return response($file, 200);
-    }
-
 }

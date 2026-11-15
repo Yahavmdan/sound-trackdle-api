@@ -15,7 +15,7 @@ class MovieController extends Controller
 
     public function getMovieNamesAndIds(): Response
     {
-        return response(self::index()->select('id', 'name')->get() ,200);
+        return response(self::index()->select('id', 'name', 'year')->orderBy('name')->get() ,200);
     }
 
 }

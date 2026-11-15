@@ -2,8 +2,10 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Str;
 
 /**
  * @property int id
@@ -14,6 +16,10 @@ use Illuminate\Database\Eloquent\Model;
  * @property string type
  * @property string main_actor
  * @property string genre
+ * @property int|null tmdb_id
+ * @property string|null source_url
+ * @property float|null clip_start
+ * @property string token
  */
 class File extends Model
 {
@@ -27,5 +33,21 @@ class File extends Model
         'type',
         'main_actor',
         'genre',
+        'tmdb_id',
+        'source_url',
+        'clip_start',
     ];
+
+    protected static function booted(): void
+    {
+        static::creating(function (File $file) {
+            $file->token ??= Str::random(32);
+        });
+    }
+
+    /** Rows that have an uploaded clip. */
+    public function scopePlayable(Builder $query): Builder
+    {
+        return $query->whereNotNull('file_path')->where('file_path', '!=', '');
+    }
 }

@@ -1,0 +1,71 @@
+<?php
+
+namespace Tests\Feature;
+
+use App\Models\File;
+use Illuminate\Foundation\Testing\RefreshDatabase;
+use Tests\TestCase;
+
+class GuessTest extends TestCase
+{
+    use RefreshDatabase;
+
+    private File $answer;
+    private File $other;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+        $base = ['type' => 'movie', 'main_actor' => 'A', 'genre' => 'G'];
+        $this->answer = File::query()->create($base + ['name' => 'Avatar', 'year' => 2009, 'file_path' => 'tracks/0000000000000001.mp3']);
+        $this->other = File::query()->create($base + ['name' => 'Titanic', 'year' => 1997, 'file_path' => 'tracks/0000000000000002.mp3']);
+    }
+
+    public function test_file_hides_id(): void
+    {
+        $res = $this->getJson('/api/file')->assertOk();
+        $this->assertArrayNotHasKey('id', $res->json());
+        $this->assertArrayNotHasKey('name', $res->json());
+        $this->assertSame($this->answer->token, $res->json('token'));
+    }
+
+    public function test_correct_guess_reveals(): void
+    {
+        $this->postJson('/api/guess', ['token' => $this->answer->token, 'movie_id' => $this->answer->id, 'step' => 0])
+            ->assertOk()->assertExactJson(['correct' => true, 'name' => 'Avatar', 'year' => 2009]);
+    }
+
+    public function test_wrong_guess_hides_name(): void
+    {
+        $res = $this->postJson('/api/guess', ['token' => $this->answer->token, 'movie_id' => $this->other->id, 'step' => 0])
+            ->assertOk()->assertExactJson(['correct' => false]);
+    }
+
+    public function test_reveal_after_four_guesses(): void
+    {
+        foreach ([0, 1, 2] as $step) {
+            $this->postJson('/api/guess', ['token' => $this->answer->token, 'movie_id' => null, 'step' => $step])
+                ->assertExactJson(['correct' => false]);
+        }
+        // 4th (last) guess is made at step 3
+        $this->postJson('/api/guess', ['token' => $this->answer->token, 'movie_id' => $this->other->id, 'step' => 3])
+            ->assertOk()->assertExactJson(['correct' => false, 'name' => 'Avatar', 'year' => 2009]);
+    }
+
+    public function test_no_reveal_last_step_without_guesses(): void
+    {
+        $this->postJson('/api/guess', ['token' => $this->answer->token, 'movie_id' => null, 'step' => 3])
+            ->assertOk()->assertExactJson(['correct' => false]);
+    }
+
+    public function test_unknown_token_404(): void
+    {
+        $this->postJson('/api/guess', ['token' => str_repeat('x', 32), 'movie_id' => 1, 'step' => 0])->assertNotFound();
+        $this->postJson('/api/stream', ['token' => str_repeat('x', 32)])->assertNotFound();
+    }
+
+    public function test_movie_list_has_year(): void
+    {
+        $this->getJson('/api/movie')->assertOk()->assertJsonFragment(['name' => 'Avatar', 'year' => 2009]);
+    }
+}
