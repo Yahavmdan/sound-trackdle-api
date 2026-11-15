@@ -23,6 +23,7 @@ use Illuminate\Support\Str;
  * @property string|null difficulty
  * @property string|null poster_url
  * @property string|null imdb_id
+ * @property int|null play_order
  */
 class File extends Model
 {
@@ -42,12 +43,14 @@ class File extends Model
         'difficulty',
         'poster_url',
         'imdb_id',
+        'play_order',
     ];
 
     protected static function booted(): void
     {
         static::creating(function (File $file) {
             $file->token ??= Str::random(32);
+            $file->play_order ??= random_int(1, 1_000_000_000);
         });
     }
 

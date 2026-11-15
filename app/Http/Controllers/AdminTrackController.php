@@ -62,6 +62,17 @@ class AdminTrackController extends Controller
         return response()->json(['id' => $file->id, 'created' => true]);
     }
 
+    /** Fresh start: forget play history and reshuffle the daily order. */
+    public function shuffle(): JsonResponse
+    {
+        $count = 0;
+        File::query()->orderBy('id')->each(function (File $file) use (&$count) {
+            $file->update(['played_at' => null, 'play_order' => random_int(1, 1_000_000_000)]);
+            $count++;
+        });
+        return response()->json(['shuffled' => $count]);
+    }
+
     /** Same as `php artisan tracks:randomize-names`, for hosts without shell access. */
     public function randomizeNames(): JsonResponse
     {

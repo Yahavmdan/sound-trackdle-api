@@ -27,6 +27,7 @@ Route::get('movie', [MovieController::class, 'getMovieNamesAndIds']);
 Route::post('stream', [FileController::class, 'stream']);
 Route::get('file', [FileController::class, 'getFile']);
 Route::get('files', [FileController::class, 'getRecentFiles']);
+Route::get('random', [FileController::class, 'random']);
 Route::post('guess', [GuessController::class, 'guess'])->middleware('throttle:30,1');
 
 Route::group(['middleware' => ['auth:sanctum', 'ability:user']], function () {
@@ -34,6 +35,7 @@ Route::group(['middleware' => ['auth:sanctum', 'ability:user']], function () {
     Route::delete('delete/all', [FileController::class, 'massDelete']);
     Route::get('file/index', [FileController::class, 'index']);
     Route::post('admin/tracks', [AdminTrackController::class, 'store']);
+    Route::post('admin/tracks/shuffle', [AdminTrackController::class, 'shuffle']);
     Route::post('admin/tracks/randomize-names', [AdminTrackController::class, 'randomizeNames']);
     Route::delete('admin/tracks/{id}', [AdminTrackController::class, 'destroy'])->whereNumber('id');
 });
