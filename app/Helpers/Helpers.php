@@ -34,6 +34,14 @@ class Helpers
         return intval($firstPart);
     }
 
+    /**
+     * Random storage path for a track; never derived from the movie id or name.
+     */
+    static function randomTrackPath(): string
+    {
+        return 'tracks/' . bin2hex(random_bytes(8)) . '.mp3';
+    }
+
     static function getAppVersion(): string
     {
         return AppServiceProvider::appVersion();
