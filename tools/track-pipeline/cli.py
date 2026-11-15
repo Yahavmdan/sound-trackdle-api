@@ -13,6 +13,7 @@
 import argparse
 import collections
 import os
+import zlib
 import sys
 
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -47,6 +48,8 @@ def main() -> None:
     p.add_argument("--target", type=int, default=10)
     p.add_argument("--min-links", type=int, default=0,
                    help="only movies with at least this many Wikipedia editions (100+ = easy)")
+    p.add_argument("--shard", default="0/1", help="i/n: this worker handles every n-th candidate (parallel fetch)")
+    p.add_argument("--until", type=int, default=0, help="fetch: stop once this many candidates are fetched")
     p.add_argument("--min-views", type=int, default=0,
                    help="only YouTube results with at least this many views")
     args = p.parse_args()
@@ -64,7 +67,14 @@ def main() -> None:
             print(f"  * {c.title} ({c.year}) - {c.main_actor} - {c.genre}")
 
     if args.command in ("fetch", "run"):
-        for c in state.by_status("new"):
+        shard, shards = (int(x) for x in args.shard.split("/"))
+        todo = [c for c in state.by_status("new") if zlib.crc32(c.qid.encode()) % shards == shard]
+        for c in todo:
+            if args.until and len(state.by_status("fetched")) >= args.until:
+                print(f"  reached {args.until} fetched; stopping")
+                break
+            if state.get(c.qid).status != "new":
+                continue
             try:
                 stages.fetch(state, c, work)
             except Exception as e:

@@ -33,7 +33,7 @@ _COLS = [f.name for f in fields(Candidate)]
 
 class State:
     def __init__(self, path: str):
-        self.db = sqlite3.connect(path)
+        self.db = sqlite3.connect(path, timeout=60)  # several fetch workers may share it
         self.db.row_factory = sqlite3.Row
         cols = ", ".join(f"{c} {'TEXT PRIMARY KEY' if c == 'qid' else ''}" for c in _COLS)
         self.db.execute(f"CREATE TABLE IF NOT EXISTS candidates ({cols})")
