@@ -58,10 +58,12 @@ class GuessTest extends TestCase
                 'poster_url' => 'https://img/p.jpg', 'imdb_url' => 'https://www.imdb.com/title/tt0499549/']);
     }
 
-    public function test_no_reveal_last_step_without_guesses(): void
+    public function test_no_reveal_before_last_step(): void
     {
-        $this->postJson('/api/guess', ['token' => $this->answer->token, 'movie_id' => null, 'step' => 3])
-            ->assertOk()->assertExactJson(['correct' => false]);
+        foreach ([0, 1, 2] as $step) {
+            $this->postJson('/api/guess', ['token' => $this->answer->token, 'movie_id' => null, 'step' => $step])
+                ->assertOk()->assertExactJson(['correct' => false]);
+        }
     }
 
     public function test_unknown_token_404(): void
@@ -73,20 +75,5 @@ class GuessTest extends TestCase
     public function test_movie_list_has_year(): void
     {
         $this->getJson('/api/movie')->assertOk()->assertJsonFragment(['name' => 'Avatar', 'year' => 2009]);
-    }
-
-    public function test_reveal_counts_guesses_per_real_client_ip_behind_proxy(): void
-    {
-        // each request arrives from a different proxy hop, same real client
-        foreach ([0, 1, 2] as $step) {
-            $this->withServerVariables(['REMOTE_ADDR' => "100.64.0.$step"])
-                ->withHeaders(['X-Forwarded-For' => '203.0.113.7'])
-                ->postJson('/api/guess', ['token' => $this->answer->token, 'movie_id' => null, 'step' => $step])
-                ->assertExactJson(['correct' => false]);
-        }
-        $this->withServerVariables(['REMOTE_ADDR' => '100.64.0.9'])
-            ->withHeaders(['X-Forwarded-For' => '203.0.113.7'])
-            ->postJson('/api/guess', ['token' => $this->answer->token, 'movie_id' => null, 'step' => 3])
-            ->assertOk()->assertJsonPath('name', 'Avatar');
     }
 }

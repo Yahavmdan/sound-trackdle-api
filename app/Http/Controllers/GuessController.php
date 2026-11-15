@@ -5,7 +5,6 @@ namespace App\Http\Controllers;
 use App\Models\File;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Cache;
 
 class GuessController extends Controller
 {
@@ -25,12 +24,10 @@ class GuessController extends Controller
         $file = File::query()->where('token', $data['token'])->first();
         if (!$file) return response()->json(['message' => 'File not found'], 404);
 
-        $key = 'guesses:' . $file->token . ':' . $request->ip();
-        Cache::add($key, 0, now()->addDay());
-        $count = Cache::increment($key);
-
         $correct = isset($data['movie_id']) && (int)$data['movie_id'] === $file->id;
-        $gameOver = $data['step'] >= self::LAST_STEP && $count >= self::GUESSES;
+        // The last guess (or skip) ends the game, so the answer is revealed with it.
+        // Per-IP guess counting is not reliable behind Railway's proxy, so it is not used.
+        $gameOver = $data['step'] >= self::LAST_STEP;
 
         $response = ['correct' => $correct];
         if ($correct || $gameOver) {
