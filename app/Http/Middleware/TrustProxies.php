@@ -12,7 +12,7 @@ class TrustProxies extends Middleware
      *
      * @var array<int, string>|string|null
      */
-    protected $proxies;
+    protected $proxies = '*'; // behind Railway's proxy: use X-Forwarded-For for the real client IP
 
     /**
      * The headers that should be used to detect proxies.
