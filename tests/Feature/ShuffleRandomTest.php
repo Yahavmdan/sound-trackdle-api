@@ -71,6 +71,30 @@ class ShuffleRandomTest extends TestCase
         }
     }
 
+    public function test_random_skips_recently_heard_then_starts_over(): void
+    {
+        $a = $this->make(1);
+        $b = $this->make(2);
+        $c = $this->make(3);
+        $this->assertSame($c->token, $this->getJson("/api/random?exclude={$a->token},{$b->token}")->json('token'));
+        // all heard: anything but the very last one
+        foreach (range(1, 10) as $_) {
+            $got = $this->getJson("/api/random?exclude={$a->token},{$b->token},{$c->token}")->assertOk()->json('token');
+            $this->assertNotSame($c->token, $got);
+        }
+    }
+
+    public function test_random_filters_by_difficulty(): void
+    {
+        $this->make(1, ['difficulty' => 'hard']);
+        $easy = $this->make(2, ['difficulty' => 'easy']);
+        foreach (range(1, 10) as $_) {
+            $this->assertSame($easy->token, $this->getJson('/api/random?difficulty=easy')->json('token'));
+        }
+        $this->getJson('/api/random?difficulty=medium')->assertNotFound();
+        $this->getJson('/api/random?difficulty=bogus')->assertOk();
+    }
+
     public function test_shuffle_resets_history_and_reorders(): void
     {
         Sanctum::actingAs(User::query()->create(['username' => 'admin', 'password' => bcrypt('password123')]), ['user']);

@@ -112,11 +112,18 @@ class FileController extends Controller
     /** Any playable track, independent of the daily schedule (never marks it played). */
     public function random(Request $request): Response
     {
-        /* @var File|null $file */
-        $file = File::query()->playable()
-            ->when($request->query('exclude'), fn($q, $token) => $q->where('token', '!=', $token))
+        // exclude = comma-separated tokens heard recently; ignored once every track was heard
+        $exclude = array_slice(array_filter(explode(',', (string)$request->query('exclude', ''))), 0, 500);
+        $level = in_array($request->query('difficulty'), ['easy', 'medium', 'hard'], true)
+            ? $request->query('difficulty') : null;
+        $pick = fn(array $skip) => File::query()->playable()
+            ->when($skip, fn($q) => $q->whereNotIn('token', $skip))
+            ->when($level, fn($q) => $q->where('difficulty', $level))
             ->inRandomOrder()
             ->first();
+
+        /* @var File|null $file */
+        $file = $pick($exclude) ?? $pick(array_slice($exclude, -1)) ?? $pick([]);
 
         if (!$file) return response(['message' => 'File not found'], 404);
         return response($file->only(self::PUBLIC_FIELDS), 200);
