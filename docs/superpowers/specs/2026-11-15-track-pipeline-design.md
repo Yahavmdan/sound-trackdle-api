@@ -16,8 +16,8 @@ DevTools. Fixing that is in scope, because a bigger pool is pointless if the ans
 ## Goals
 
 - An automated, re-runnable pipeline that: picks movies, finds each movie's main theme on
-  YouTube, cuts the most recognizable 15 s, lets the owner approve clips, then uploads them to a
-  Railway bucket and registers them in the DB.
+  YouTube, cuts the most recognizable 15 s, lets the owner approve clips, then uploads them to the
+  existing Railway volume (via the API) and registers them in the DB.
 - First run target: ~500 playable movies (configurable `--target`).
 - No way to learn today's answer from API responses, file URLs or localStorage before the game
   ends.
@@ -74,9 +74,11 @@ Owner picked **A**. B may be added later as a secondary source.
 
 ### 1. Pipeline (new): `sound-trackdle-api/tools/track-pipeline/`
 
-Python 3.11+ CLI, run locally. Deps: `yt-dlp`, `ffmpeg` (binary on PATH), `requests`, `boto3`,
-`numpy` (loudness fallback). Config via `.env` (git-ignored): `TMDB_API_KEY`, `S3_ENDPOINT`,
-`S3_BUCKET`, `S3_ACCESS_KEY`, `S3_SECRET_KEY`, `API_BASE_URL`, `API_TOKEN`.
+Python 3.11+ CLI, run locally. Deps: `yt-dlp`, `ffmpeg` (binary on PATH), `requests`,
+`numpy` (loudness fallback). Python is not installed on the owner's PC yet — setup step
+installs Python 3.12 + ffmpeg (winget). Config via `.env` (git-ignored): `TMDB_API_KEY`,
+`API_BASE_URL`, `API_USERNAME`, `API_PASSWORD` (pipeline logs in via existing
+`POST user/login` to get a Sanctum token).
 
 State lives in a local SQLite file `pipeline.db` (one row per candidate movie with `status`:
 `new → downloaded → cut → approved | rejected → published`, plus `tmdb_id`, chosen YouTube
@@ -111,23 +113,23 @@ Stages (subcommands):
    mm:ss / Try next video**. Decisions write to `pipeline.db`. "Try next video" re-runs fetch
    with the next-ranked result; "Re-cut" re-runs cut with the given start.
 5. **`publish`** — for each approved clip:
-   - object key `tracks/{random 16-hex}.mp3` (random, not derived from id/name)
-   - upload to the Railway bucket via boto3 (S3 API)
-   - call the API admin endpoint (below) in batches of 50 to create/update rows
-   - mark `published`.
+   one multipart `POST admin/tracks` (file + metadata, see API section); the API stores it on
+   the volume under a random name and upserts the row. Mark `published` on 2xx; failures stay
+   `approved` and are retried next run.
 6. **`run`** — convenience: discover → fetch → cut, then prints "open review".
 
-### 2. Storage: Railway bucket
+### 2. Storage: keep the Railway volume (owner decision)
 
-- Add `league/flysystem-aws-s3-v3` to the API; configure the `s3` disk with
-  `AWS_ENDPOINT`, `AWS_USE_PATH_STYLE_ENDPOINT=true`, bucket creds from Railway.
-- New config `TRACKS_DISK` (default `s3`). All track reads/writes go through it.
-- `stream` returns `Storage::disk(TRACKS_DISK)->temporaryUrl($path, now()->addMinutes(30))`
-  (works with private buckets; no stable public URL).
-- **Migration of existing clips:** one-off artisan command `tracks:migrate-to-bucket` copies each
-  existing `storage/app/public/tracks/*` file to the bucket under a random key and updates
-  `file_path`.
-- Old zip `upload` endpoint: kept but rewritten to write to `TRACKS_DISK` with random keys.
+Verified via Railway CLI: service `sound-trackdle-api` has volume `sheep-volume` mounted at
+`/app/storage/app/public/tracks` (166 MB / 5 GB used); `FILESYSTEM_DISK=public`; no bucket
+exists. A 15 s 128 kbps mp3 is ~240 KB, so 5 GB holds ~20k clips. No S3, no bucket.
+
+- New clips are written to the `public` disk as `tracks/{random 16-hex}.mp3` — the name is not
+  derived from id or movie name. `stream` keeps returning the public URL.
+- **Rename existing clips:** one-off artisan command `tracks:randomize-names` renames every file
+  in `tracks/` to a random name and updates `file_path`. Run once in production via
+  `railway ssh`. Idempotent: skips files already random-named.
+- Old zip `upload` endpoint: rewritten to also use random names (kept for manual uploads).
 
 ### 3. API changes (`sound-trackdle-api`)
 
@@ -139,9 +141,10 @@ Migration on `files`:
   1994 / 2019).
 
 New endpoint (auth:sanctum, ability:user):
-- `POST admin/tracks/bulk` — body `[{tmdb_id, name, year, main_actor, genre, file_path,
-  source_url, clip_start}]`; upsert by `tmdb_id`, else by (`name`, `year`); returns created /
-  updated counts.
+- `POST admin/tracks` — multipart: `file` (mp3, max 2 MB) + `tmdb_id, name, year, main_actor,
+  genre, source_url, clip_start`. Stores the file on the volume under a random name; upserts
+  the row by `tmdb_id`, else by (`name`, `year`). For existing seeded rows it only fills
+  `tmdb_id`, clip and provenance fields. Returns `{id, created: bool}`.
 
 Leak hardening:
 - **Daily token instead of id.** `GET file` returns `{token, main_actor, year, genre}` where
@@ -177,17 +180,17 @@ implicit order today).
 
 ### 5. Rollout order
 
-1. API: S3 disk + bucket config + `tracks:migrate-to-bucket`; deploy; run migration command.
+1. API: `tracks:randomize-names` + `''`→null normalization; deploy; run the command once.
    Game keeps working (same endpoints).
 2. API + frontend together: token / guess hardening (breaking API change — deploy API first
    with old endpoints kept one release, then frontend, then remove old endpoints).
-3. API: schema columns + `admin/tracks/bulk`.
+3. API: schema columns + `POST admin/tracks`.
 4. Pipeline: build stages; first run with `--target 50` to tune filters; then full run.
 
 ## Constraints
 
 - Clip length exactly 15 s (player uses 5/9/12/15).
-- Railway bucket is S3-compatible; credentials from Railway dashboard (owner provides).
+- Storage = existing Railway volume (5 GB). PHP upload limits on Railway must allow 2 MB.
 - Local Windows PC: ffmpeg + Python must be installed; yt-dlp may need updating when YouTube
   changes (`yt-dlp -U`).
 - TMDB API key (free) — owner creates one.
