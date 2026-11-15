@@ -25,6 +25,7 @@ Route::get('version', [Controller::class, 'getAppVersion']);
 Route::post('user/login', [UserController::class, 'loginUser']);
 Route::get('movie', [MovieController::class, 'getMovieNamesAndIds']);
 Route::post('stream', [FileController::class, 'stream']);
+Route::get('audio/{token}', [FileController::class, 'audio'])->where('token', '[A-Za-z0-9]+');
 Route::get('file', [FileController::class, 'getFile']);
 Route::get('files', [FileController::class, 'getRecentFiles']);
 Route::get('random', [FileController::class, 'random']);

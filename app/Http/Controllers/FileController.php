@@ -8,6 +8,7 @@ use App\Models\File;
 use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Symfony\Component\HttpFoundation\BinaryFileResponse;
 use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Storage;
 use ZipArchive;
@@ -72,7 +73,25 @@ class FileController extends Controller
             return response(['message' => 'File not found'], 404);
         }
 
-        return response(['path' => Storage::disk('public')->url($file->file_path)], 200);
+        return response(['path' => url('api/audio/' . $file->token)], 200);
+    }
+
+    /**
+     * The clip itself, through the API so it gets CORS headers and byte-range support
+     * (needed to jump to any point of the clip in the player).
+     */
+    public function audio(string $token): BinaryFileResponse|Response
+    {
+        /* @var File|null $file */
+        $file = File::query()->where('token', $token)->playable()->first();
+        if (!$file || !Storage::disk('public')->exists($file->file_path)) {
+            return response(['message' => 'File not found'], 404);
+        }
+
+        return response()->file(Storage::disk('public')->path($file->file_path), [
+            'Content-Type' => 'audio/mpeg',
+            'Cache-Control' => 'public, max-age=86400',
+        ]);
     }
 
     public function getRecentFiles(): Response

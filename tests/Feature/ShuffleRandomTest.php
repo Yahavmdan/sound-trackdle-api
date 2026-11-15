@@ -50,6 +50,21 @@ class ShuffleRandomTest extends TestCase
         $this->assertNull($file->refresh()->played_at);
     }
 
+    public function test_audio_served_with_range_support(): void
+    {
+        $file = $this->make(1);
+        \Illuminate\Support\Facades\Storage::fake('public');
+        \Illuminate\Support\Facades\Storage::disk('public')->put($file->file_path, str_repeat('a', 1000));
+
+        $path = $this->postJson('/api/stream', ['token' => $file->token])->assertOk()->json('path');
+        $this->assertStringEndsWith('/api/audio/' . $file->token, $path);
+
+        $this->get('/api/audio/' . $file->token)->assertOk()->assertHeader('Accept-Ranges', 'bytes');
+        $this->get('/api/audio/' . $file->token, ['Range' => 'bytes=0-99'])->assertStatus(206);
+        $this->get('/api/audio/nope')->assertNotFound();
+        $this->assertNull($file->refresh()->played_at);
+    }
+
     public function test_random_returns_playable_track_without_marking_played(): void
     {
         $this->make(1, ['file_path' => null]);
