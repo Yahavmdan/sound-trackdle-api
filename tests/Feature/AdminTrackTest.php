@@ -130,4 +130,22 @@ class AdminTrackTest extends TestCase
         $this->assertNull(File::query()->find($id)->file_path);
         Storage::disk('public')->assertMissing($path);
     }
+
+    public function test_randomize_names_endpoint(): void
+    {
+        Storage::fake('public');
+        $this->actAsAdmin();
+        $file = File::query()->create(['name' => 'X', 'type' => 'movie', 'year' => 2000, 'main_actor' => 'A',
+            'genre' => 'G', 'file_path' => 'tracks/7.mp3']);
+        Storage::disk('public')->put('tracks/7.mp3', 'audio');
+
+        $message = $this->postJson('/api/admin/tracks/randomize-names')->assertOk()->json('message');
+        $this->assertStringContainsString('Renamed 1 file(s).', $message);
+        $this->assertMatchesRegularExpression('#^tracks/[0-9a-f]{16}\.mp3$#', $file->refresh()->file_path);
+    }
+
+    public function test_randomize_names_requires_auth(): void
+    {
+        $this->postJson('/api/admin/tracks/randomize-names')->assertUnauthorized();
+    }
 }

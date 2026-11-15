@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Helpers\Helpers;
 use App\Http\Requests\File\StoreTrackRequest;
 use App\Models\File;
+use App\Services\TrackNameService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Storage;
 
@@ -59,6 +60,12 @@ class AdminTrackController extends Controller
             'type' => 'movie',
         ]);
         return response()->json(['id' => $file->id, 'created' => true]);
+    }
+
+    /** Same as `php artisan tracks:randomize-names`, for hosts without shell access. */
+    public function randomizeNames(): JsonResponse
+    {
+        return response()->json(['message' => 'Renamed ' . TrackNameService::randomizeAll() . ' file(s).']);
     }
 
     /** Remove a movie's clip (the movie stays in the guess list). */
