@@ -1,0 +1,2 @@
+# runtime: stdlib only + yt-dlp and ffmpeg on PATH
+pytest==8.3.3
