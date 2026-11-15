@@ -27,3 +27,10 @@ def test_animated_voice_without_links():
 
 def test_missing_field():
     assert starring_from_wikitext("{{Infobox film\n| name = X\n}}") is None
+
+
+def test_poster_file_from_infobox():
+    from pipeline.discover import image_from_wikitext
+    assert image_from_wikitext("| name = X\n| image = Cars 2006.jpg\n| alt = poster") == "Cars 2006.jpg"
+    assert image_from_wikitext("| image = [[File:Frozen II (film) poster.jpg|220px]]") == "Frozen II (film) poster.jpg"
+    assert image_from_wikitext("| image = \n| caption = x") is None

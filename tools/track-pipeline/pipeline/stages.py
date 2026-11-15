@@ -4,6 +4,7 @@ import os
 import urllib.error
 
 from . import media
+from .discover import fill_posters, lookup
 from .http import get_json, post_json, post_multipart
 from .search import rank
 from .segment import pick_start
@@ -65,21 +66,49 @@ def next_video(state: State, c: Candidate, work_dir: str, log=print) -> None:
         cut(state, c, work_dir, log=log)
 
 
-def publish(state: State, api_url: str, username: str, password: str, log=print) -> int:
-    api = api_url.rstrip("/")
+def _login(api: str, username: str, password: str) -> dict:
     login = post_json(api + "/user/login", {"username": username, "password": password})
     token = login.get("token")
     if not token:
         raise SystemExit(f"login failed: {login.get('message')}")
-    headers = {"Authorization": f"Bearer {token}"}
+    return {"Authorization": f"Bearer {token}"}
+
+
+def backfill(api_url: str, username: str, password: str, log=print) -> int:
+    """Set difficulty / poster / IMDb on movies already in the API (metadata only, no clip)."""
+    api = api_url.rstrip("/")
+    headers = _login(api, username, password)
+    done = 0
+    for m in get_json(api + "/movie"):
+        found = lookup(m["name"], m.get("year"))
+        if not found:
+            log(f"  ? {m['name']} ({m.get('year')}): not found on Wikipedia")
+            continue
+        c, ent = found
+        fill_posters([found])
+        fields = {"name": m["name"], "year": m.get("year") or c.year, "main_actor": "-", "genre": "-",
+                  "tmdb_id": c.tmdb_id, "difficulty": c.difficulty, "poster_url": c.poster_url, "imdb_id": c.imdb_id}
+        try:
+            post_multipart(api + "/admin/tracks", fields, None, None, headers)
+            done += 1
+            log(f"  = {m['name']}: {c.difficulty} ({c.sitelinks} wikis) imdb={c.imdb_id} poster={'yes' if c.poster_url else 'no'}")
+        except urllib.error.HTTPError as e:
+            log(f"  x {m['name']}: HTTP {e.code} {e.read()[:150]!r}")
+    return done
+
+
+def publish(state: State, api_url: str, username: str, password: str, log=print) -> int:
+    api = api_url.rstrip("/")
+    headers = _login(api, username, password)
     done = 0
     for c in state.by_status("approved"):
         try:
             res = post_multipart(api + "/admin/tracks", {
                 "tmdb_id": c.tmdb_id, "name": c.title, "year": c.year, "main_actor": c.main_actor,
                 "genre": c.genre, "source_url": c.source_url, "clip_start": c.clip_start,
+                "difficulty": c.difficulty, "poster_url": c.poster_url, "imdb_id": c.imdb_id,
             }, "file", c.clip_path, headers)
-            c.status, c.reason = "published", None
+            c.status, c.reason, c.api_id = "published", None, res.get("id")
             done += 1
             log(f"  ^ {c.title} -> id {res.get('id')} ({'new' if res.get('created') else 'updated'})")
         except urllib.error.HTTPError as e:

@@ -17,7 +17,59 @@ SOURCE_PAGES = [
     "AFI's 100 Years of Film Scores",
     "List of highest-grossing films",
     "List of films considered the best",
+    "AFI's 100 Years...100 Movies",
+    "List of highest-grossing animated films",
+    "List of Academy Award-winning films",
+    "Academy Award for Best Original Score",
+    "List of films voted the best",
 ]
+
+# Popularity = Wikipedia language editions with an article on the film.
+EASY_MIN_LINKS = 100
+MEDIUM_MIN_LINKS = 60
+
+
+def difficulty(sitelinks: int) -> str:
+    if sitelinks >= EASY_MIN_LINKS:
+        return "easy"
+    if sitelinks >= MEDIUM_MIN_LINKS:
+        return "medium"
+    return "hard"
+
+
+def _infobox_wikitext(enwiki_title: str) -> str:
+    try:
+        data = get_json(WIKIPEDIA_API, {"action": "parse", "page": enwiki_title, "prop": "wikitext",
+                                        "section": 0, "format": "json", "redirects": 1}, HEADERS)
+    except Exception:
+        return ""
+    return data.get("parse", {}).get("wikitext", {}).get("*", "")
+
+
+def image_from_wikitext(wikitext: str) -> str | None:
+    """File name in the infobox `image` field (the poster), without the File: prefix."""
+    m = re.search(r"\|\s*image\s*=[ \t]*(?:\[\[)?(?:File:|Image:)?([^|\]\n<{]+?\.(?:jpe?g|png|gif|webp|svg))",
+                  wikitext, re.I)
+    return m.group(1).strip() if m else None
+
+
+def _posters(enwiki_titles: list[str]) -> dict[str, str]:
+    """enwiki title -> poster thumbnail URL (infobox image; non-free posters included)."""
+    files = {t: image_from_wikitext(_infobox_wikitext(t)) for t in enwiki_titles}
+    names = sorted({f"File:{f}" for f in files.values() if f})
+    urls: dict[str, str] = {}
+    for i in range(0, len(names), 50):
+        data = get_json(WIKIPEDIA_API, {"action": "query", "prop": "imageinfo", "iiprop": "url", "iiurlwidth": 500,
+                                        "titles": "|".join(names[i:i + 50]), "format": "json"}, HEADERS)
+        q = data.get("query", {})
+        back = {r["to"]: r["from"] for r in q.get("normalized", [])}
+        for page in q.get("pages", {}).values():
+            info = (page.get("imageinfo") or [{}])[0]
+            src = info.get("thumburl") or info.get("url")
+            if src:
+                urls[back.get(page["title"], page["title"])] = src
+    return {t: urls[f"File:{f}"] for t, f in files.items() if f and f"File:{f}" in urls}
+
 
 FILM = "Q11424"
 ANIMATED_FILM = "Q202866"
@@ -32,6 +84,8 @@ def _page_links(page: str) -> list[str]:
 def _entities(params: dict, batch_key: str, values: list[str]) -> dict:
     out: dict = {}
     for i in range(0, len(values), 50):
+        if i and i % 500 == 0:
+            print(f"    ...{i}/{len(values)}", flush=True)
         data = get_json(WIKIDATA_API, {"action": "wbgetentities", batch_key: "|".join(values[i:i + 50]),
                                        "languages": "en", "format": "json", **params}, HEADERS)
         out.update({k: v for k, v in data.get("entities", {}).items() if not k.startswith("-")})
@@ -73,8 +127,10 @@ def discover(limit: int, existing: list[tuple[str, int | None]], skip_qids: set[
     titles: list[str] = []
     for page in SOURCE_PAGES:
         titles += [t for t in _page_links(page) if t not in titles]
+    print(f"  {len(titles)} linked titles; resolving on Wikidata...", flush=True)
 
     ents = _entities({"sites": "enwiki", "props": "claims|sitelinks|labels"}, "titles", titles)
+    print(f"  {len(ents)} entities resolved", flush=True)
     films = []
     for qid, ent in ents.items():
         if not ({FILM, ANIMATED_FILM} & set(_claim_ids(ent, "P31"))):
@@ -91,15 +147,36 @@ def discover(limit: int, existing: list[tuple[str, int | None]], skip_qids: set[
     for links, qid, title, year, ent in films:
         if is_existing(title, year, seen):
             continue
-        tmdb = _claim_str(ent, "P4947")
-        picked.append((Candidate(qid=qid, title=title, year=year, main_actor="", genre="",
-                                 tmdb_id=int(tmdb) if tmdb and tmdb.isdigit() else None, sitelinks=links), ent))
+        picked.append((_candidate(qid, title, year, links, ent), ent))
         seen.append((title, year))
         if len(picked) >= limit * 2:  # spare ones replace candidates missing actor/genre
             break
 
+    print(f"  {len(films)} films; {len(picked)} new candidates; fetching cast/genres/posters...", flush=True)
     _fill_details(picked)
+    fill_posters(picked)
     return [c for c, _ in picked if c.main_actor and c.genre][:limit]
+
+
+def _candidate(qid: str, title: str, year: int, links: int, ent: dict) -> Candidate:
+    tmdb = _claim_str(ent, "P4947")
+    return Candidate(qid=qid, title=title, year=year, main_actor="", genre="",
+                     tmdb_id=int(tmdb) if tmdb and tmdb.isdigit() else None, sitelinks=links,
+                     imdb_id=_claim_str(ent, "P345"), difficulty=difficulty(links))
+
+
+def lookup(name: str, year: int | None) -> tuple[Candidate, dict] | None:
+    """Find an existing game movie on Wikidata by its English Wikipedia article."""
+    guesses = ([f"{name} ({year} film)"] if year else []) + [f"{name} (film)", name]
+    ents = _entities({"sites": "enwiki", "props": "claims|sitelinks|labels", "redirects": "yes"}, "titles", guesses)
+    for qid, ent in ents.items():
+        if not ({FILM, ANIMATED_FILM} & set(_claim_ids(ent, "P31"))):
+            continue
+        y = _year(ent)
+        if year and y and abs(y - year) > 1:
+            continue
+        return _candidate(qid, name, year or y, len(ent.get("sitelinks", {})), ent), ent
+    return None
 
 
 def starring_from_wikitext(wikitext: str) -> str | None:
@@ -116,12 +193,14 @@ def starring_from_wikitext(wikitext: str) -> str | None:
 
 
 def _infobox_star(enwiki_title: str) -> str | None:
-    try:
-        data = get_json(WIKIPEDIA_API, {"action": "parse", "page": enwiki_title, "prop": "wikitext",
-                                        "section": 0, "format": "json", "redirects": 1}, HEADERS)
-    except Exception:
-        return None
-    return starring_from_wikitext(data.get("parse", {}).get("wikitext", {}).get("*", ""))
+    return starring_from_wikitext(_infobox_wikitext(enwiki_title))
+
+
+def fill_posters(picked: list[tuple[Candidate, dict]]) -> None:
+    titles = {c.qid: ent.get("sitelinks", {}).get("enwiki", {}).get("title") for c, ent in picked}
+    posters = _posters([t for t in titles.values() if t])
+    for c, _ in picked:
+        c.poster_url = posters.get(titles[c.qid] or "")
 
 
 def _fill_details(picked: list[tuple[Candidate, dict]]) -> None:

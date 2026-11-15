@@ -22,6 +22,10 @@ class Candidate:
     clip_path: str | None = None
     tried_videos: str = ""  # comma separated ids already rejected
     reason: str | None = None
+    imdb_id: str | None = None
+    poster_url: str | None = None
+    difficulty: str | None = None  # easy | medium | hard
+    api_id: int | None = None  # row id in the API once published
 
 
 _COLS = [f.name for f in fields(Candidate)]
@@ -33,6 +37,10 @@ class State:
         self.db.row_factory = sqlite3.Row
         cols = ", ".join(f"{c} {'TEXT PRIMARY KEY' if c == 'qid' else ''}" for c in _COLS)
         self.db.execute(f"CREATE TABLE IF NOT EXISTS candidates ({cols})")
+        have = {r[1] for r in self.db.execute("PRAGMA table_info(candidates)")}
+        for c in _COLS:
+            if c not in have:
+                self.db.execute(f"ALTER TABLE candidates ADD COLUMN {c}")
         self.db.commit()
 
     def add(self, c: Candidate) -> bool:
