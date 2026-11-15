@@ -24,3 +24,24 @@ def test_topic_channel_beats_random_upload():
 def test_rank_drops_rejected():
     ranked = rank([video("Gladiator trailer"), video("Gladiator Suite")], "Gladiator", 2000)
     assert [v["title"] for v in ranked] == ["Gladiator Suite"]
+
+
+def test_rejects_fan_made_inspired_live_and_rejected():
+    for title in ["BLACK WIDOW (2021) SOUNDTRACK | EPIC THEME BY TOMMY LUCAS",
+                  "Billie Eilish - WHEN I WAS OLDER (Music Inspired By The Film ROMA)",
+                  "Spectre (2015) Main Title with Radiohead rejected song",
+                  "No Time To Die (Live From The BRIT Awards)",
+                  "Gladiator theme fan made"]:
+        movie = "Black Widow" if "WIDOW" in title else "Roma" if "ROMA" in title else \
+            "Spectre" if "Spectre" in title else "No Time To Die" if "Time" in title else "Gladiator"
+        assert score(video(title), movie, None) is None, title
+
+
+def test_min_views():
+    import pipeline.search as s
+    s.MIN_VIEWS = 1_000_000
+    try:
+        assert score(video("Gladiator Main Theme", views=999_999), "Gladiator", 2000) is None
+        assert score(video("Gladiator Main Theme", views=2_000_000), "Gladiator", 2000) is not None
+    finally:
+        s.MIN_VIEWS = 0

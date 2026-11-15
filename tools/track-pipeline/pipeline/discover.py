@@ -22,6 +22,15 @@ SOURCE_PAGES = [
     "List of Academy Award-winning films",
     "Academy Award for Best Original Score",
     "List of films voted the best",
+    "List of Walt Disney Animation Studios films",
+    "List of Pixar films",
+    "List of Marvel Cinematic Universe films",
+    "List of DreamWorks Animation productions",
+    "List of James Bond films",
+    "List of highest-grossing films in the United States and Canada",
+    "List of films based on DC Comics publications",
+    "List of Star Wars films",
+    "List of Jurassic Park films",
 ]
 
 # Popularity = Wikipedia language editions with an article on the film.
@@ -150,7 +159,7 @@ def _clean_genre(label: str) -> str:
 
 
 def discover(limit: int, existing: list[tuple[str, int | None]], skip_qids: set[str],
-             min_year: int = 1960) -> list[Candidate]:
+             min_year: int = 1960, min_links: int = 0) -> list[Candidate]:
     titles: list[str] = []
     for page in SOURCE_PAGES:
         titles += [t for t in _page_links(page) if t not in titles]
@@ -165,6 +174,8 @@ def discover(limit: int, existing: list[tuple[str, int | None]], skip_qids: set[
         year = _year(ent)
         title = ent.get("labels", {}).get("en", {}).get("value")
         if not title or not year or year < min_year or qid in skip_qids:
+            continue
+        if len(ent.get("sitelinks", {})) < min_links:
             continue
         films.append((len(ent.get("sitelinks", {})), qid, title, year, ent))
     films.sort(key=lambda f: -f[0])

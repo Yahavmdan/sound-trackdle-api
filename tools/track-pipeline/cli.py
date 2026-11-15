@@ -18,7 +18,7 @@ import sys
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
 
-from pipeline import review, stages  # noqa: E402
+from pipeline import review, search, stages  # noqa: E402
 from pipeline.discover import discover  # noqa: E402
 from pipeline.state import State  # noqa: E402
 
@@ -45,8 +45,13 @@ def main() -> None:
     p = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     p.add_argument("command", choices=["discover", "fetch", "cut", "run", "review", "publish", "backfill", "cleanup", "status"])
     p.add_argument("--target", type=int, default=10)
+    p.add_argument("--min-links", type=int, default=0,
+                   help="only movies with at least this many Wikipedia editions (100+ = easy)")
+    p.add_argument("--min-views", type=int, default=0,
+                   help="only YouTube results with at least this many views")
     args = p.parse_args()
 
+    search.MIN_VIEWS = args.min_views
     api_url = env.get("API_BASE_URL", "http://localhost:8000/api")
     existing_urls = [api_url] + [u for u in env.get("EXISTING_API_URLS", "").split(",") if u]
 
@@ -54,7 +59,7 @@ def main() -> None:
         existing = stages.existing_movies(existing_urls)
         existing += [(c.title, c.year) for c in state.all()]
         print(f"{len(existing)} movies already known; discovering {args.target} new...")
-        for c in discover(args.target, existing, {c.qid for c in state.all()}):
+        for c in discover(args.target, existing, {c.qid for c in state.all()}, min_links=args.min_links):
             state.add(c)
             print(f"  * {c.title} ({c.year}) - {c.main_actor} - {c.genre}")
 

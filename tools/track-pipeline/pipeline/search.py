@@ -10,8 +10,12 @@ MAX_DURATION = 720
 BANNED = re.compile(
     r"\b(trailer|teaser|reaction|cover|tutorial|remix|lofi|lo fi|8d|slowed|reverb|nightcore|"
     r"ranking|top \d+|(?:1|2|3|5|8|10|12) hours?|extended|guitar|piano version|karaoke|scene|clip|"
-    r"behind the scenes|review|explained)\b"
+    r"behind the scenes|review|explained|inspired by|fan ?made|tribute|live from|live at|unofficial|"
+    r"rejected|concept|epic version|epic theme by|ai generated|recreation|recreated|orchestral cover)\b"
 )
+
+# Minimum views for a result to count as the film's well-known music (0 = no minimum).
+MIN_VIEWS = 0
 GOOD = re.compile(r"\b(main theme|theme|suite|main title|opening|soundtrack|ost|score)\b")
 
 
@@ -23,6 +27,8 @@ def score(video: dict, title: str, year: int | None) -> float | None:
 
     vtitle = normalize(video.get("title") or "")
     if BANNED.search(vtitle):
+        return None
+    if (video.get("view_count") or 0) < MIN_VIEWS:
         return None
     if normalize(title) not in vtitle:
         return None
