@@ -36,6 +36,7 @@ def load_env(path: str) -> dict:
 
 
 def main() -> None:
+    sys.stdout.reconfigure(encoding="utf-8", errors="replace")
     env = load_env(os.path.join(HERE, ".env"))
     work = os.path.join(HERE, "work")
     os.makedirs(work, exist_ok=True)
@@ -78,7 +79,8 @@ def main() -> None:
         print(f"published {n}")
 
     if args.command == "backfill":
-        print(f"backfilled {stages.backfill(api_url, env['API_USERNAME'], env['API_PASSWORD'])}")
+        print(f"backfilled {stages.backfill(api_url, env['API_USERNAME'], env['API_PASSWORD'],
+                                                 {c.title for c in state.by_status('published')})}")
 
     if args.command in ("run", "publish", "backfill", "cleanup"):
         stages.cleanup(state, work)

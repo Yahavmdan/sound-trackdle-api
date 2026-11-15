@@ -2,6 +2,7 @@
 import json
 import os
 import shutil
+import subprocess
 import urllib.error
 
 from . import media
@@ -32,16 +33,26 @@ def fetch(state: State, c: Candidate, work_dir: str, log=print) -> None:
         state.save(c)
         log(f"  x {c.title}: {c.reason}")
         return
-    best = results[0]
-    info = media.video_info(best["id"])
-    c.video_id = best["id"]
-    c.source_url = f"https://www.youtube.com/watch?v={best['id']}"
-    c.heatmap = json.dumps(info.get("heatmap") or [])
-    c.audio_path = media.download_audio(best["id"], os.path.join(work_dir, "audio"))
-    c.duration = media.duration(c.audio_path)
-    c.status, c.reason = "fetched", None
+    for best in results[:3]:  # a video can fail to download (blocked/region); try the next ones
+        try:
+            info = media.video_info(best["id"])
+            audio = media.download_audio(best["id"], os.path.join(work_dir, "audio"))
+        except subprocess.CalledProcessError:
+            c.tried_videos = ",".join(filter(None, [c.tried_videos, best["id"]]))
+            log(f"  ! {c.title}: download failed for {best['id']}, trying next")
+            continue
+        c.video_id = best["id"]
+        c.source_url = f"https://www.youtube.com/watch?v={best['id']}"
+        c.heatmap = json.dumps(info.get("heatmap") or [])
+        c.audio_path = audio
+        c.duration = media.duration(audio)
+        c.status, c.reason = "fetched", None
+        state.save(c)
+        log(f"  + {c.title}: {best.get('title')} ({best.get('channel')})")
+        return
+    c.status, c.reason = "failed", "downloads failed for the top results"
     state.save(c)
-    log(f"  + {c.title}: {best.get('title')} ({best.get('channel')})")
+    log(f"  x {c.title}: {c.reason}")
 
 
 def _remove(path: str | None) -> None:
@@ -114,12 +125,14 @@ def _login(api: str, username: str, password: str) -> dict:
     return {"Authorization": f"Bearer {token}"}
 
 
-def backfill(api_url: str, username: str, password: str, log=print) -> int:
+def backfill(api_url: str, username: str, password: str, skip_names: set[str] | None = None, log=print) -> int:
     """Set difficulty / poster / IMDb on movies already in the API (metadata only, no clip)."""
     api = api_url.rstrip("/")
     headers = _login(api, username, password)
     done = 0
     for m in get_json(api + "/movie"):
+        if skip_names and m["name"] in skip_names:
+            continue
         found = lookup(m["name"], m.get("year"))
         if not found:
             log(f"  ? {m['name']} ({m.get('year')}): not found on Wikipedia")

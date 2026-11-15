@@ -77,5 +77,12 @@ def post_multipart(url: str, fields: dict, file_field: str | None, file_path: st
     req = urllib.request.Request(url, data=b"".join(parts), method="POST", headers={
         "User-Agent": UA, "Accept": "application/json",
         "Content-Type": f"multipart/form-data; boundary={boundary}", **(headers or {})})
-    with urllib.request.urlopen(req, timeout=timeout) as r:
-        return json.load(r)
+    for attempt in range(6):
+        try:
+            with urllib.request.urlopen(req, timeout=timeout) as r:
+                return json.load(r)
+        except urllib.error.HTTPError as e:
+            if e.code != 429 or attempt == 5:
+                raise
+            wait = e.headers.get("Retry-After")
+            time.sleep(float(wait) if wait and wait.isdigit() else 10)
